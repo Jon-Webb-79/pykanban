@@ -2,10 +2,11 @@ import logging
 import os
 import sys
 
-from custom_logger import setup_logging
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QGridLayout, QMainWindow, QTabWidget, QWidget
-from widgets import DayNightRadioButton
+
+from pykanban.custom_logger import setup_logging
+from pykanban.widgets import DayNightRadioButton
 
 # ==========================================================================================
 # ==========================================================================================
@@ -173,9 +174,9 @@ class KanbanControllerManager(KanbanViewManager):
 # ==========================================================================================
 
 
-def main(day_sheet: str, night_sheet: str) -> None:
+def main(day_sheet: str, night_sheet: str, log_path: str) -> None:
     # Initialize logging
-    setup_logging("data/log_handlers.json", "log")
+    setup_logging(log_path, "log")
     logger = logging.getLogger(__name__)
     logger.info("Initializing Kanban Session")
 
@@ -183,11 +184,11 @@ def main(day_sheet: str, night_sheet: str) -> None:
     if not os.path.exists(day_sheet):
         logger.debug(f"Day Theme sheet {day_sheet} does not exist!")
     if not os.path.exists(night_sheet):
-        logger.debug(f"Night Theme sheet {day_sheet} does not exist!")
+        logger.debug(f"Night Theme sheet {night_sheet} does not exist!")
 
     # begin Application
     app = QApplication(sys.argv)
-    controller = KanbanControllerManager(day, night, logger)
+    controller = KanbanControllerManager(day_sheet, night_sheet, logger)
     logger.info("Initializing Kanban to day theme")
     controller.set_day_theme()
     controller.show()
