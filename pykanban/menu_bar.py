@@ -75,24 +75,28 @@ class FileMenu:
         self.open_action.setFont(self.font)
         self.open_action.triggered.connect(self.open_db)
         self.open_action.setStatusTip("Open an existing database")
+        self.open_action.setShortcut("Ctrl+Shift+O")
 
         # Set up New menu bar option
         self.new_action = QAction("New")
         self.new_action.setFont(self.font)
         self.new_action.triggered.connect(self.new_db)
         self.new_action.setStatusTip("Create a new database")
+        self.new_action.setShortcut("Ctrl+Shift+N")
 
         # Set up Close menu bar option
         self.close_action = QAction("Close")
         self.close_action.setFont(self.font)
         self.close_action.triggered.connect(self.close_db)
         self.close_action.setStatusTip("Close current database")
+        self.close_action.setShortcut("Ctrl+Shift+C")
 
         # Set up Delete menu bar option
         self.delete_action = QAction("Delete")
         self.delete_action.setFont(self.font)
         self.delete_action.triggered.connect(self.delete_db)
         self.delete_action.setStatusTip("Delete a database")
+        self.delete_action.setShortcut("Ctrl+Shift+D")
 
     # ------------------------------------------------------------------------------------------
 
