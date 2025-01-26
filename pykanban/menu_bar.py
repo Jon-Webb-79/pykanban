@@ -115,6 +115,107 @@ class FileMenu:
 # ==========================================================================================
 
 
+class ColumnMenu:
+    """
+    Class that builds all functionality necessary to impliment the File attributes
+    of the menu bar
+
+    :param controller: A ToDoListController object
+    """
+
+    def __init__(self, font: QFont):
+        self.font = font
+        self.menu = QMenu("Columns")
+        self.menu.menuAction().setStatusTip("Kanban Column Options")
+
+        self.menu.setFont(self.font)
+        self._create_actions()
+        self._add_actions()
+
+    # ------------------------------------------------------------------------------------------
+
+    def create_col(self):
+        """
+        Method that encodes the functionality of the Create Column attribute
+        """
+        print("Created a new Kanban Column")
+
+    # ------------------------------------------------------------------------------------------
+
+    def delete_col(self):
+        """
+        Method that encodes the functionality of the Delete Column attribute
+        """
+        print("Deleted a Kanban Column")
+
+    # ------------------------------------------------------------------------------------------
+
+    def unlock_col(self):
+        """
+        Method that encodes the functionality of the Unlock attribute
+        """
+        print("Unlocked Kanban Columns")
+
+    # ------------------------------------------------------------------------------------------
+
+    def lock_col(self):
+        """
+        Method that encodes the functionality of the Unlock attribute
+        """
+        print("Locked Kanban Columns")
+
+    # ==========================================================================================
+    # PRIVATE LIKE METHODS
+
+    def _create_actions(self):
+        """
+        Creates and connects slots for attributes of the File menu bar item
+        """
+        # Set up Open menu bar option
+        self.create_action = QAction("Create Column")
+        self.create_action.setFont(self.font)
+        self.create_action.triggered.connect(self.create_col)
+        self.create_action.setStatusTip("Create a new Kanban column")
+        self.create_action.setShortcut("Ctrl+Shift+X")
+
+        # Set up Delete menu bar option
+        self.delete_action = QAction("Delete Column")
+        self.delete_action.setFont(self.font)
+        self.delete_action.triggered.connect(self.delete_col)
+        self.delete_action.setStatusTip("Delete a Kanban column")
+        self.delete_action.setShortcut("Ctrl+Shift+S")
+
+        # Set up Delete menu bar option
+        self.unlock_action = QAction("Unlock")
+        self.unlock_action.setFont(self.font)
+        self.unlock_action.triggered.connect(self.unlock_col)
+        self.unlock_action.setStatusTip("Unlock Kanban columns")
+        self.unlock_action.setShortcut("Ctrl+Shift+U")
+
+        # Set up Delete menu bar option
+        self.lock_action = QAction("Lock")
+        self.lock_action.setFont(self.font)
+        self.lock_action.triggered.connect(self.lock_col)
+        self.lock_action.setStatusTip("Lock Kanban columns")
+        self.lock_action.setShortcut("Ctrl+Shift+L")
+
+    # ------------------------------------------------------------------------------------------
+
+    def _add_actions(self):
+        """
+        Adds slots for the File menu bar item
+        """
+        self.menu.addAction(self.create_action)
+        self.menu.addAction(self.delete_action)
+        self.menu.addSeparator()  # Add visual separatio
+        self.menu.addAction(self.unlock_action)
+        self.menu.addAction(self.lock_action)
+
+
+# ==========================================================================================
+# ==========================================================================================
+
+
 class MenuBar(QMenuBar):
     """
     Custom implementation of the QMenuBar item.  This class integrates all menu
@@ -128,8 +229,10 @@ class MenuBar(QMenuBar):
         font = QFont("Helvetica", 14)
         self.setFont(font)  # Set font for top-level menu
         self.file_menu = FileMenu(font)
+        self.col_menu = ColumnMenu(font)
 
         self.addMenu(self.file_menu.menu)
+        self.addMenu(self.col_menu.menu)
 
 
 # ==========================================================================================
