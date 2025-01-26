@@ -19,7 +19,7 @@ class FileMenu:
     Class that builds all functionality necessary to impliment the File attributes
     of the menu bar
 
-    :param controller: A ToDoListController object
+    :param font: A font object to set text attributes
     """
 
     def __init__(self, font: QFont):
@@ -117,10 +117,10 @@ class FileMenu:
 
 class ColumnMenu:
     """
-    Class that builds all functionality necessary to impliment the File attributes
+    Class that builds all functionality necessary to impliment the Column attributes
     of the menu bar
 
-    :param controller: A ToDoListController object
+    :param font: A font object to set text attributes
     """
 
     def __init__(self, font: QFont):
@@ -216,6 +216,91 @@ class ColumnMenu:
 # ==========================================================================================
 
 
+class ProjectMenu:
+    """
+    Class that builds all functionality necessary to impliment the Project attributes
+    of the menu bar
+
+    :param font: A font object to set text attributes
+    """
+
+    def __init__(self, font: QFont):
+        self.font = font
+        self.menu = QMenu("Project")
+        self.menu.menuAction().setStatusTip("Options to create and modify projects")
+
+        self.menu.setFont(self.font)
+        self._create_actions()
+        self._add_actions()
+
+    # ------------------------------------------------------------------------------------------
+
+    def create_project(self):
+        """
+        Method that encodes the functionality of the Create Project attribute
+        """
+        print("Created a new Kanban Project")
+
+    # ------------------------------------------------------------------------------------------
+
+    def delete_project(self):
+        """
+        Method that encodes the functionality of the Delete Project attribute
+        """
+        print("Deleted a Kanban Project")
+
+    # ------------------------------------------------------------------------------------------
+
+    def modify_project(self):
+        """
+        Method that encodes the functionality of the modify project attribute
+        """
+        print("Modify a Kanban Project")
+
+    # ==========================================================================================
+    # PRIVATE LIKE METHODS
+
+    def _create_actions(self):
+        """
+        Creates and connects slots for attributes of the File menu bar item
+        """
+        # Set up Open menu bar option
+        self.create_action = QAction("Create Project")
+        self.create_action.setFont(self.font)
+        self.create_action.triggered.connect(self.create_project)
+        self.create_action.setStatusTip("Create a new Kanban project")
+        self.create_action.setShortcut("Ctrl+Shift+P")
+
+        # Set up Delete menu bar option
+        self.delete_action = QAction("Delete Project")
+        self.delete_action.setFont(self.font)
+        self.delete_action.triggered.connect(self.delete_project)
+        self.delete_action.setStatusTip("Delete a Kanban project")
+        self.delete_action.setShortcut("Ctrl+Shift+Q")
+
+        # Set up Delete menu bar option
+        self.modify_action = QAction("Unlock")
+        self.modify_action.setFont(self.font)
+        self.modify_action.triggered.connect(self.modify_project)
+        self.modify_action.setStatusTip("Modify a Kanban project")
+        self.modify_action.setShortcut("Ctrl+Shift+M")
+
+    # ------------------------------------------------------------------------------------------
+
+    def _add_actions(self):
+        """
+        Adds slots for the File menu bar item
+        """
+        self.menu.addAction(self.create_action)
+        self.menu.addAction(self.modify_action)
+        self.menu.addSeparator()  # Add visual separatio
+        self.menu.addAction(self.delete_action)
+
+
+# ==========================================================================================
+# ==========================================================================================
+
+
 class MenuBar(QMenuBar):
     """
     Custom implementation of the QMenuBar item.  This class integrates all menu
@@ -230,13 +315,11 @@ class MenuBar(QMenuBar):
         self.setFont(font)  # Set font for top-level menu
         self.file_menu = FileMenu(font)
         self.col_menu = ColumnMenu(font)
+        self.proj_menu = ProjectMenu(font)
 
         self.addMenu(self.file_menu.menu)
         self.addMenu(self.col_menu.menu)
-
-
-# ==========================================================================================
-# ==========================================================================================
+        self.addMenu(self.proj_menu.menu)
 
 
 # ==========================================================================================
