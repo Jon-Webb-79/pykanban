@@ -3,10 +3,11 @@ import os
 import sys
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QGridLayout, QMainWindow, QTabWidget, QWidget
+from PyQt6.QtWidgets import QApplication, QGridLayout, QMainWindow, QStatusBar, QWidget
 
 from pykanban.custom_logger import setup_logging
 from pykanban.menu_bar import MenuBar
+from pykanban.tabs import KanbanTabManager
 from pykanban.widgets import DayNightRadioButton
 
 # ==========================================================================================
@@ -61,8 +62,7 @@ class KanbanViewManager(QMainWindow):
         self.setMenuBar(self.menu_bar)
 
         # Create Status Bar on bottom left corner
-        self.status_bar = self.statusBar()
-        self.setStatusBar(self.status_bar)
+        self.setStatusBar(QStatusBar())
 
     # ------------------------------------------------------------------------------------------
 
@@ -101,7 +101,8 @@ class KanbanViewManager(QMainWindow):
         self.day_night_radio_button = DayNightRadioButton()
 
         # Setup Tab widget
-        self.tabs = QTabWidget(self.central_widget)
+        self.tabs = KanbanTabManager(self.central_widget)
+        # self.tabs = QTabWidget(self.central_widget)
 
         # Ensure the radio button stays compact
         self.day_night_radio_button.setFixedWidth(150)  # Adjust width as needed
@@ -185,7 +186,11 @@ class KanbanControllerManager(KanbanViewManager):
 
 def main(day_sheet: str, night_sheet: str, log_path: str) -> None:
     # Initialize logging
-    setup_logging(log_path, "log")
+    try:
+        setup_logging(log_path, "log")
+    except Exception as e:
+        print(f"Logging setup failed: {e}")
+
     logger = logging.getLogger(__name__)
     logger.info("Initializing Kanban Session")
 

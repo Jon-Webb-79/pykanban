@@ -3,7 +3,6 @@ import datetime as dt
 import json
 import logging
 import os
-import pathlib
 from logging import config
 from typing import override
 
@@ -112,22 +111,24 @@ class NonErrorFilter(logging.Filter):
 
 
 def setup_logging(config_path: str, log_path: str) -> None:
-    if os.path.exists(config_path):
-        config_file = pathlib.Path(config_path)
-        with open(config_file) as f_in:
-            nconfig = json.load(f_in)
+    try:
+        if os.path.exists(config_path):
+            with open(config_path) as f_in:
+                nconfig = json.load(f_in)
 
-        # Create logs directory if it doesn't exist
-        os.makedirs(log_path, exist_ok=True)
+            os.makedirs(log_path, exist_ok=True)
+            config.dictConfig(nconfig)
 
-        config.dictConfig(nconfig)
-        queue_handler = logging.getHandlerByName("queue_handler")
-        if queue_handler is not None:
-            queue_handler.listener.start()
-            atexit.register(queue_handler.listener.stop)
+            queue_handler = logging.getHandlerByName("queue_handler")
+            if queue_handler:
+                queue_handler.listener.start()
+                atexit.register(queue_handler.listener.stop)
+        else:
+            raise FileNotFoundError(f"Logging config file not found: {config_path}")
 
-    else:
-        raise FileNotFoundError(f"Logging config file not found: {config_path}")
+    except Exception as e:
+        print(f"Logging setup failed: {e}")
+        logging.basicConfig(level=logging.INFO)
 
 
 # ==========================================================================================
