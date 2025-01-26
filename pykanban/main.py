@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QGridLayout, QMainWindow, QTabWidget, QWidget
 
 from pykanban.custom_logger import setup_logging
+from pykanban.menu_bar import MenuBar
 from pykanban.widgets import DayNightRadioButton
 
 # ==========================================================================================
@@ -54,6 +55,14 @@ class KanbanViewManager(QMainWindow):
         # Add Widgets
         self._create_initial_widgets()
         self._arrange_widgets()
+
+        # Create Menu Bar
+        self.menu_bar = MenuBar()
+        self.setMenuBar(self.menu_bar)
+
+        # Create Status Bar on bottom left corner
+        self.status_bar = self.statusBar()
+        self.setStatusBar(self.status_bar)
 
     # ------------------------------------------------------------------------------------------
 
@@ -195,16 +204,6 @@ def main(day_sheet: str, night_sheet: str, log_path: str) -> None:
     app_result = app.exec()
     logger.info("Closed Kanban Session")
     sys.exit(app_result)
-
-
-# ==========================================================================================
-# ==========================================================================================
-
-
-if __name__ == "__main__":
-    day: str = "data/style_sheets/day.qss"
-    night: str = "data/style_sheets/night.qss"
-    main(day, night)
 
 
 # ==========================================================================================
