@@ -1,5 +1,9 @@
+import logging
+
 from PyQt6.QtGui import QAction, QFont
-from PyQt6.QtWidgets import QMenu, QMenuBar
+from PyQt6.QtWidgets import QDialog, QMenu, QMenuBar, QMessageBox
+
+from pykanban.dialogs import NewDatabaseDialog
 
 # ==========================================================================================
 # ==========================================================================================
@@ -22,7 +26,9 @@ class FileMenu:
     :param font: A font object to set text attributes
     """
 
-    def __init__(self, font: QFont):
+    def __init__(self, controller, font: QFont, log: logging.Logger):
+        self.controller = controller
+        self.log = log
         self.font = font
         self.menu = QMenu("File")
         self.menu.menuAction().setStatusTip("File and I/O Options")
@@ -45,7 +51,26 @@ class FileMenu:
         """
         Method that encodes the functionality of the New attribute
         """
-        print("Created New Database")
+        dialog = NewDatabaseDialog(self.log, self.menu)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            db_path = dialog.get_database_path()
+            self.log.info(f"User confirmed database creation at: {db_path}")
+
+            result = self.controller.create_database(db_path)
+            if result.success:
+                self.log.info(
+                    f"Successfully created and initialized database at: {db_path}"
+                )
+                QMessageBox.information(
+                    self.menu, "Success", "Database created successfully."
+                )
+            else:
+                self.log.error(f"Failed to initialize database: {result.message}")
+                QMessageBox.critical(
+                    self.menu, "Error", f"Failed to create database: {result.message}"
+                )
+        else:
+            self.log.info("User cancelled database creation")
 
     # ------------------------------------------------------------------------------------------
 
@@ -309,11 +334,11 @@ class MenuBar(QMenuBar):
     :param controller: A ToDoListController object
     """
 
-    def __init__(self):
+    def __init__(self, controller, log: logging.Logger):
         super().__init__()
         font = QFont("Helvetica", 14)
         self.setFont(font)  # Set font for top-level menu
-        self.file_menu = FileMenu(font)
+        self.file_menu = FileMenu(controller, font, log)
         self.col_menu = ColumnMenu(font)
         self.proj_menu = ProjectMenu(font)
 

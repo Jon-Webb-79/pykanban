@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QGridLayout, QMainWindow, QStatusBar, QWidget
 
 from pykanban.custom_logger import setup_logging
+from pykanban.database import KanbanDatabaseManager, QueryResult
 from pykanban.menu_bar import MenuBar
 from pykanban.tabs import KanbanTabManager
 from pykanban.widgets import DayNightRadioButton
@@ -58,7 +59,7 @@ class KanbanViewManager(QMainWindow):
         self._arrange_widgets()
 
         # Create Menu Bar
-        self.menu_bar = MenuBar()
+        self.menu_bar = MenuBar(self, self.logger)
         self.setMenuBar(self.menu_bar)
 
         # Create Status Bar on bottom left corner
@@ -174,10 +175,26 @@ class KanbanControllerManager(KanbanViewManager):
     """
 
     def __init__(self, day_sheet: str, night_sheet: str, log: logging.Logger):
+        self.kanban_db = None  # Initialize as None
+        self.log = log
         super().__init__(day_sheet, night_sheet, log)
 
         self.day_night_radio_button.day_button.clicked.connect(self.set_day_theme)
         self.day_night_radio_button.night_button.clicked.connect(self.set_night_theme)
+
+    # ------------------------------------------------------------------------------------------
+
+    def create_database(self, db_path: str) -> QueryResult:
+        """Create and initialize a new Kanban database
+
+        Args:
+            db_path: Path where the database should be created
+
+        Returns:
+            QueryResult indicating success/failure of database creation
+        """
+        self.kanban_db = KanbanDatabaseManager(db_path, self.log)
+        return self.kanban_db.initialize_database()
 
 
 # ==========================================================================================

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -654,6 +655,83 @@ class SQLiteManager(DatabaseManager):
             )
 
         return QueryResult(True, DatabaseStatus.OPEN, "Transaction rolled back")
+
+
+# ==========================================================================================
+# ==========================================================================================
+
+
+class KanbanDatabaseManager:
+    """
+    Class that implements Kanban-specific database operations using SQLiteManager
+
+    :param db_path: Path to the SQLite database file
+    :param log: Logger instance for tracking operations
+    """
+
+    def __init__(self, db_path: str, log: logging.Logger):
+        self.db_path = db_path
+        self.log = log
+        self.db_manager = SQLiteManager(db_path)
+
+    def initialize_database(self) -> QueryResult:
+        """Create initial schema for a new Kanban database
+
+        Returns:
+            QueryResult:
+                success (bool): True if schema created successfully
+                data (DatabaseStatus): An enum describing database status
+                message (str): Description of result
+        """
+        create_columns_table = """
+        CREATE TABLE Columns (
+            Name TEXT PRIMARY KEY,
+            "Order" INTEGER NOT NULL UNIQUE,
+            Number INTEGER NOT NULL DEFAULT 0
+        );
+        """
+
+        with self.db_manager.connection() as db:
+            try:
+                # Begin transaction for schema creation
+                begin_result = db.begin_transaction()
+                if not begin_result.success:
+                    self.log.error(f"Failed to begin transaction: {begin_result.message}")
+                    return begin_result
+
+                # Create the Columns table
+                query_result = db.execute_query(create_columns_table)
+                if not query_result.success:
+                    self.log.error(
+                        f"Failed to create Columns table: {query_result.message}"
+                    )
+                    db.rollback_transaction()
+                    return query_result
+
+                # Commit the changes
+                commit_result = db.commit_transaction()
+                if not commit_result.success:
+                    self.log.error(
+                        f"Failed to commit transaction: {commit_result.message}"
+                    )
+                    db.rollback_transaction()
+                    return commit_result
+
+                self.log.info("Successfully initialized Kanban database schema")
+                return QueryResult(
+                    True,
+                    DatabaseStatus.CLOSED,
+                    "Kanban database schema created successfully",
+                )
+
+            except Exception as e:
+                db.rollback_transaction()
+                self.log.error(f"Unexpected error initializing database: {str(e)}")
+                return QueryResult(
+                    False,
+                    DatabaseStatus.ERROR,
+                    f"Failed to create database schema: {str(e)}",
+                )
 
 
 # ==========================================================================================

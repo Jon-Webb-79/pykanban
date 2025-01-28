@@ -31,11 +31,13 @@ class KanbanTabManager(QTabWidget):
         self.task_queue_tab = QWidget()
         self.kanban_tab = QWidget()
         self.statistics_tab = QWidget()
+        self.stuck_tab = QWidget()
 
         # Add the tabs to the QTabWidget
         self.addTab(self.task_queue_tab, "Task Queue")
         self.addTab(self.kanban_tab, "Kanban")
         self.addTab(self.statistics_tab, "Statistics")
+        self.addTab(self.stuck_tab, "Blocked")
 
 
 # ==========================================================================================
