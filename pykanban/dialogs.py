@@ -150,13 +150,6 @@ class NewDatabaseDialog(QDialog):
         # Basic validation - allow letters, numbers, underscores, and hyphens
         valid = bool(path and name and name.replace("_", "").replace("-", "").isalnum())
 
-        # Check if database already exists
-        if valid:
-            db_path = os.path.join(path, f"{name}.db")
-            if os.path.exists(db_path):
-                valid = False
-                self.log.debug(f"Database already exists at: {db_path}")
-
         self.create_button.setEnabled(valid)
 
     # ------------------------------------------------------------------------------------------
@@ -167,35 +160,38 @@ class NewDatabaseDialog(QDialog):
         name = self._clean_database_name(self.name_edit.text())
 
         if not path or not name:
-            self.logger.warning("Validation failed: Missing path or name")
+            self.log.warning("Database creation failed: Missing path or name")
             QMessageBox.warning(
                 self, "Invalid Input", "Please provide both a location and database name."
             )
             return
 
         if not name.replace("_", "").replace("-", "").isalnum():
-            self.log.warning(f"Validation failed: Invalid database name: {name}")
+            self.log.warning(f"Database creation failed: Invalid name format: {name}")
             QMessageBox.warning(
                 self,
                 "Invalid Name",
-                """Database name must contain only letters, numbers, underscores,
-                and hyphens.""",
+                """Database name must contain only letters, numbers,
+                underscores, and hyphens.""",
             )
             return
 
         db_path = os.path.join(path, f"{name}.db")
         if os.path.exists(db_path):
-            self.log.warning(f"Validation failed: Database already exists at: {db_path}")
+            self.log.warning(f"Database creation failed: Path already exists: {db_path}")
             QMessageBox.warning(
                 self,
                 "Database Exists",
-                f"A database named '{name}.db' already exists in this location.",
+                f"""A database named '{name}.db' already exists in this
+                location.\nPlease choose a different name.""",
             )
+            self.name_edit.clear()
+            self.name_edit.setFocus()
             return
 
         self.database_name = name
         self.selected_path = path
-        self.log.info(f"Database creation validated for path: {db_path}")
+        self.log.info(f"Database creation dialog validated successfully for: {db_path}")
         self.accept()
 
 
