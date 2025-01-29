@@ -41,6 +41,7 @@ class KanbanViewManager(QMainWindow):
         self.night_theme = night_theme
         self.logger = log
         self.init_theme = False
+        self.theme_status = None
 
         # Set layout structure for application
         self.grid = QGridLayout()
@@ -65,6 +66,8 @@ class KanbanViewManager(QMainWindow):
         # Create Status Bar on bottom left corner
         self.setStatusBar(QStatusBar())
 
+        self.set_day_theme()
+
     # ------------------------------------------------------------------------------------------
 
     def set_day_theme(self) -> None:
@@ -73,10 +76,12 @@ class KanbanViewManager(QMainWindow):
         """
         if os.path.exists(self.day_theme):
             with open(self.day_theme) as file:
+                style = file.read()
                 if self.init_theme:
                     self.logger.info("Changing Kanban app to day theme")
-                self.setStyleSheet(file.read())
+                QApplication.instance().setStyleSheet(style)
                 self.init_theme = True
+                self.themestatus = self.day_theme
 
     # ------------------------------------------------------------------------------------------
 
@@ -86,10 +91,12 @@ class KanbanViewManager(QMainWindow):
         """
         if os.path.exists(self.night_theme):
             with open(self.night_theme) as file:
+                style = file.read()
                 if self.init_theme:
                     self.logger.info("Changing Kanban app to night theme")
-                self.setStyleSheet(file.read())
+                QApplication.instance().setStyleSheet(style)
                 self.init_theme = True
+                self.theme_status = self.night_theme
 
     # ==========================================================================================
     # PRIVATE-LIKE METHODS
@@ -221,7 +228,7 @@ def main(day_sheet: str, night_sheet: str, log_path: str) -> None:
     app = QApplication(sys.argv)
     controller = KanbanControllerManager(day_sheet, night_sheet, logger)
     logger.info("Initializing Kanban to day theme")
-    controller.set_day_theme()
+    #    controller.set_day_theme()
     controller.show()
     app_result = app.exec()
     logger.info("Closed Kanban Session")
