@@ -674,15 +674,10 @@ class KanbanDatabaseManager:
         self.log = log
         self.db_manager = SQLiteManager(db_path)
 
-    def initialize_database(self) -> QueryResult:
-        """Create initial schema for a new Kanban database
+    # ------------------------------------------------------------------------------------------
 
-        Returns:
-            QueryResult:
-                success (bool): True if schema created successfully
-                data (DatabaseStatus): An enum describing database status
-                message (str): Description of result
-        """
+    def initialize_database(self) -> QueryResult:
+        """Create initial schema for a new Kanban database with default columns"""
         create_columns_table = """
         CREATE TABLE Columns (
             Name TEXT PRIMARY KEY,
@@ -708,6 +703,28 @@ class KanbanDatabaseManager:
                     db.rollback_transaction()
                     return query_result
 
+                # Add default columns
+                default_columns = [
+                    ("Ready to Start", 1),
+                    ("In Progress", 2),
+                    ("Complete", 3),
+                ]
+
+                insert_query = """
+                INSERT INTO Columns (Name, "Order", Number)
+                VALUES (?, ?, 0);
+                """
+
+                for name, order in default_columns:
+                    column_result = db.execute_query(insert_query, (name, order))
+                    if not column_result.success:
+                        self.log.error(
+                            f"""Failed to create default col
+                            {name}: {column_result.message}"""
+                        )
+                        db.rollback_transaction()
+                        return column_result
+
                 # Commit the changes
                 commit_result = db.commit_transaction()
                 if not commit_result.success:
@@ -717,21 +734,173 @@ class KanbanDatabaseManager:
                     db.rollback_transaction()
                     return commit_result
 
-                self.log.info("Successfully initialized Kanban database schema")
+                self.log.info(
+                    "Successfully initialized Kanban database schema with default columns"
+                )
                 return QueryResult(
-                    True,
-                    DatabaseStatus.CLOSED,
-                    "Kanban database schema created successfully",
+                    True, None, "Kanban database schema created successfully"
                 )
 
             except Exception as e:
                 db.rollback_transaction()
                 self.log.error(f"Unexpected error initializing database: {str(e)}")
                 return QueryResult(
-                    False,
-                    DatabaseStatus.ERROR,
-                    f"Failed to create database schema: {str(e)}",
+                    False, None, f"Failed to create database schema: {str(e)}"
                 )
+
+    # ------------------------------------------------------------------------------------------
+
+    def add_column(self, name: str, order: int) -> QueryResult:
+        """Add a new column to the Kanban board
+
+        Args:
+            name: Name of the column
+            order: Order of the column (left to right)
+
+        Returns:
+            QueryResult indicating success/failure
+        """
+        insert_query = """
+        INSERT INTO Columns (Name, "Order", Number)
+        VALUES (?, ?, 0);
+        """
+
+        with self.db_manager.connection() as db:
+            try:
+                # Begin transaction
+                begin_result = db.begin_transaction()
+                if not begin_result.success:
+                    self.log.error(f"Failed to begin transaction: {begin_result.message}")
+                    return begin_result
+
+                # Insert the new column
+                query_result = db.execute_query(insert_query, (name, order))
+                if not query_result.success:
+                    self.log.error(
+                        f"Failed to create column {name}: {query_result.message}"
+                    )
+                    db.rollback_transaction()
+                    return query_result
+
+                # Commit the changes
+                commit_result = db.commit_transaction()
+                if not commit_result.success:
+                    self.log.error(
+                        f"Failed to commit transaction: {commit_result.message}"
+                    )
+                    db.rollback_transaction()
+                    return commit_result
+
+                self.log.info(f"Successfully created column: {name} at position {order}")
+                return QueryResult(True, None, f"Column {name} created successfully")
+
+            except Exception as e:
+                db.rollback_transaction()
+                self.log.error(f"Unexpected error creating column: {str(e)}")
+                return QueryResult(False, None, f"Failed to create column: {str(e)}")
+
+    # ------------------------------------------------------------------------------------------
+
+    def reorder_column(self, column_name: str, new_order: int) -> QueryResult:
+        """Reorder a Kanban column
+
+        Args:
+            column_name: Name of the column to reorder
+            new_order: New position for the column
+
+        Returns:
+            QueryResult indicating success/failure
+        """
+        # Don't allow reordering of fixed columns
+        if column_name in ["Ready to Start", "Complete"]:
+            return QueryResult(False, None, f"Cannot reorder fixed column: {column_name}")
+
+        # Get current max order
+        max_order_query = 'SELECT MAX("Order") as max_order FROM Columns;'
+
+        with self.db_manager.connection() as db:
+            try:
+                # Begin transaction
+                begin_result = db.begin_transaction()
+                if not begin_result.success:
+                    return begin_result
+
+                # Get max order
+                query_result = db.execute_query(max_order_query)
+                if not query_result.success:
+                    db.rollback_transaction()
+                    return query_result
+
+                result = query_result.data
+                result.next()
+                max_order = result.value("max_order")
+
+                # Validate new order
+                if new_order <= 1 or new_order >= max_order:
+                    db.rollback_transaction()
+                    return QueryResult(
+                        False,
+                        None,
+                        "Cannot move column before 'Ready to Start' or after 'Complete'",
+                    )
+
+                # Update the order
+                update_query = """
+                UPDATE Columns
+                SET "Order" = ?
+                WHERE Name = ?;
+                """
+
+                update_result = db.execute_query(update_query, (new_order, column_name))
+                if not update_result.success:
+                    db.rollback_transaction()
+                    return update_result
+
+                # Commit the changes
+                commit_result = db.commit_transaction()
+                if not commit_result.success:
+                    db.rollback_transaction()
+                    return commit_result
+
+                return QueryResult(
+                    True, None, f"Column {column_name} reordered successfully"
+                )
+
+            except Exception as e:
+                db.rollback_transaction()
+                return QueryResult(False, None, f"Failed to reorder column: {str(e)}")
+
+    # ------------------------------------------------------------------------------------------
+
+    def load_columns(self) -> QueryResult:
+        """Load all columns from the database
+
+        Returns:
+            QueryResult with list of (name, number) tuples ordered by column order
+        """
+        query = """
+        SELECT Name, Number
+        FROM Columns
+        ORDER BY "Order";
+        """
+
+        with self.db_manager.connection() as db:
+            try:
+                result = db.execute_query(query)
+                if not result.success:
+                    return result
+
+                columns = []
+                query_result = result.data
+                while query_result.next():
+                    name = query_result.value("Name")
+                    number = query_result.value("Number")
+                    columns.append((name, number))
+
+                return QueryResult(True, columns, "Columns loaded successfully")
+
+            except Exception as e:
+                return QueryResult(False, None, f"Failed to load columns: {str(e)}")
 
 
 # ==========================================================================================

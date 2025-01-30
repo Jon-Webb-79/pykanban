@@ -82,6 +82,10 @@ class KanbanViewManager(QMainWindow):
                 QApplication.instance().setStyleSheet(style)
                 self.init_theme = True
                 self.themestatus = self.day_theme
+                self.repaint()
+                self.tabs.repaint()
+                for i in range(self.tabs.count()):
+                    self.tabs.widget(i).repaint()
 
     # ------------------------------------------------------------------------------------------
 
@@ -97,6 +101,10 @@ class KanbanViewManager(QMainWindow):
                 QApplication.instance().setStyleSheet(style)
                 self.init_theme = True
                 self.theme_status = self.night_theme
+                self.repaint()
+                self.tabs.repaint()
+                for i in range(self.tabs.count()):
+                    self.tabs.widget(i).repaint()
 
     # ==========================================================================================
     # PRIVATE-LIKE METHODS
@@ -201,7 +209,20 @@ class KanbanControllerManager(KanbanViewManager):
             QueryResult indicating success/failure of database creation
         """
         self.kanban_db = KanbanDatabaseManager(db_path, self.log)
-        return self.kanban_db.initialize_database()
+        result = self.kanban_db.initialize_database()
+        if result.success:
+            self.load_kanban_board()
+        return result
+
+    # ------------------------------------------------------------------------------------------
+
+    def load_kanban_board(self):
+        """Load and display the Kanban board columns"""
+        if self.kanban_db:
+            result = self.kanban_db.load_columns()
+            if result.success:
+                for name, number in result.data:
+                    self.tabs.add_column(name, number)
 
 
 # ==========================================================================================
