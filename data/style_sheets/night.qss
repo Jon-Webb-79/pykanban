@@ -21,12 +21,12 @@ QLabel {
 /*         QTabWidget            */
 /* ============================= */
 QTabWidget {
-    background-color: rgb(55, 55, 55);
+    background-color: rgb(95, 95, 95);
     border: 1px solid rgb(100, 100, 100);
 }
 
 QTabWidget::pane {
-    background-color: rgb(65, 65, 65);
+    background-color: rgb(95, 95, 95);
     border: 1px solid rgb(120, 120, 120);
     border-radius: 6px;
 }
@@ -143,12 +143,9 @@ QCheckBox::indicator:unchecked {
     background-color: rgb(60, 60, 60);
     border: 1px solid rgb(100, 100, 100);
 }
-/* ============================= */
-/*        KANBAN COLUMNS         */
-/* ============================= */
-/* Main column container */
-KanbanColumn, QWidget[class="KanbanColumn"] {
-    background-color: rgb(45, 45, 45) !important;
+/* Styling for individual Kanban columns */
+QWidget#kanbanColumn {
+    background-color: rgb(255, 0, 0);
     border: 1px solid rgb(80, 80, 80);
     border-radius: 8px;
     margin: 8px;
@@ -156,31 +153,13 @@ KanbanColumn, QWidget[class="KanbanColumn"] {
     max-width: 300px;
 }
 
-/* All labels within Kanban columns */
-KanbanColumn QLabel, QWidget[class="KanbanColumn"] QLabel {
-    background-color: rgb(55, 55, 55);
-    color: rgb(220, 220, 220) !important;
+/* Column header styling */
+QWidget#kanbanColumn QLabel {
+    background-color: rgb(255, 0, 0);
+    color: rgb(90, 90, 90);
     font-weight: bold;
     padding: 8px;
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     border-bottom: 1px solid rgb(80, 80, 80);
-}
-
-/* Scroll area styling */
-KanbanColumn QScrollArea, QWidget[class="KanbanColumn"] QScrollArea {
-    background-color: rgb(45, 45, 45);
-    border: none;
-}
-
-/* Task container background */
-KanbanColumn QWidget#task_container,
-QWidget[class="KanbanColumn"] QWidget#task_container {
-    background-color: rgb(45, 45, 45);
-}
-
-/* All widgets inside the column */
-KanbanColumn > QWidget,
-QWidget[class="KanbanColumn"] > QWidget {
-    background-color: rgb(45, 45, 45);
 }

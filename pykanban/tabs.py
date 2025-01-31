@@ -16,29 +16,37 @@ from pykanban.widgets import KanbanColumn
 
 
 class KanbanTabManager(QTabWidget):
-    """
-    Manages all application tabs in the main window.
+    """Manages multiple tabs including Kanban board display
 
-    The tabs include:
-    - Task Queue
-    - Kanban Board
-    - Statistics
+    Creates and manages tabs for task queue, Kanban board, statistics,
+    and blocked tasks. Sets up scrollable container for Kanban columns.
 
-    This class initializes empty tabs for now.
+    Attributes:
+        task_queue_tab: Tab for task queue view
+        kanban_tab: Tab containing Kanban board
+        statistics_tab: Tab for statistics view
+        stuck_tab: Tab for blocked tasks
+        column_layout: Layout managing Kanban columns
     """
 
     def __init__(self, parent=None):
-        super().__init__(parent)
+        """Initialize tab manager with empty tabs
 
-        # Initialize the three tabs
+        Creates four empty tabs for different views: task queue, Kanban board,
+        statistics, and blocked tasks. Sets up the Kanban board layout.
+
+        Args:
+            parent: Parent widget to attach this tab manager to. Used by Qt for
+                    widget hierarchy and memory management. If None, creates a
+                    top-level widget.
+        """
+        super().__init__(parent)
         self.task_queue_tab = QWidget()
         self.kanban_tab = QWidget()
         self.statistics_tab = QWidget()
         self.stuck_tab = QWidget()
-
         self._setup_kanban_board()
 
-        # Add the tabs to the QTabWidget
         self.addTab(self.task_queue_tab, "Task Queue")
         self.addTab(self.kanban_tab, "Kanban")
         self.addTab(self.statistics_tab, "Statistics")
@@ -46,54 +54,56 @@ class KanbanTabManager(QTabWidget):
 
     # ------------------------------------------------------------------------------------------
 
-    def _setup_kanban_board(self):
-        """Initialize the Kanban board layout"""
-        # Create horizontal layout for columns
-        self.kanban_layout = QHBoxLayout(self.kanban_tab)
-        self.kanban_layout.setSpacing(10)
-        self.kanban_layout.setContentsMargins(10, 10, 10, 10)
-
-        # Create scroll area for horizontal scrolling if many columns
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # Create container widget for columns
-        self.column_container = QWidget()
-        self.column_layout = QHBoxLayout(self.column_container)
-        self.column_layout.setSpacing(10)
-        self.column_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-        scroll.setWidget(self.column_container)
-        self.kanban_layout.addWidget(scroll)
-
-    # ------------------------------------------------------------------------------------------
-
-    def add_column(self, name: str, number: int = 0):
-        """Add a new column to the Kanban board
-
-        Args:
-            name: Name of the column
-            number: Initial number of tasks in the column
-        """
-        column = KanbanColumn(name, number)
-        self.column_layout.addWidget(column)
-
-    # ------------------------------------------------------------------------------------------
-
     def update_column(self, name: str, number: int):
-        """Update the task count for a specific column
+        """Update task count for specified column
 
         Args:
-            name: Name of the column to update
-            number: New number of tasks
+            name: Name of column to update
+            number: New task count
         """
         for i in range(self.column_layout.count()):
             column = self.column_layout.itemAt(i).widget()
             if column.name == name:
                 column.update_task_count(number)
                 break
+
+    # ------------------------------------------------------------------------------------------
+
+    def add_column(self, name: str, number: int = 0):
+        """Add new column to Kanban board
+
+        Args:
+            name: Column header text
+            number: Initial task count
+        """
+        column = KanbanColumn(name, number)
+        self.column_layout.addWidget(column)
+
+    # ==========================================================================================
+
+    def _setup_kanban_board(self):
+        """Configure layout for Kanban board tab
+
+        Creates horizontal scrollable area to contain Kanban columns
+        """
+        self.kanban_layout = QHBoxLayout(self.kanban_tab)
+        self.kanban_layout.setSpacing(10)
+        self.kanban_layout.setContentsMargins(10, 10, 10, 10)
+
+        self.scroll = QScrollArea()
+        self.scroll.setObjectName("kanbanScrollArea")
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        self.column_container = QWidget()
+        self.column_container.setObjectName("columnContainer")
+        self.column_layout = QHBoxLayout(self.column_container)
+        self.column_layout.setSpacing(10)
+        self.column_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        self.scroll.setWidget(self.column_container)
+        self.kanban_layout.addWidget(self.scroll)
 
 
 # ==========================================================================================
