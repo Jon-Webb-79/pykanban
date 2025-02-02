@@ -117,7 +117,7 @@ class KanbanViewManager(QMainWindow):
         self.day_night_radio_button = DayNightRadioButton()
 
         # Setup Tab widget
-        self.tabs = KanbanTabManager(self.central_widget)
+        self.tabs = KanbanTabManager(self.logger, self.central_widget)
         # self.tabs = QTabWidget(self.central_widget)
 
         # Ensure the radio button stays compact

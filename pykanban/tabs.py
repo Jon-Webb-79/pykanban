@@ -1,3 +1,5 @@
+import logging
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QScrollArea, QTabWidget, QWidget
 
@@ -29,18 +31,21 @@ class KanbanTabManager(QTabWidget):
         column_layout: Layout managing Kanban columns
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, log: logging.Logger, parent=None):
         """Initialize tab manager with empty tabs
 
         Creates four empty tabs for different views: task queue, Kanban board,
         statistics, and blocked tasks. Sets up the Kanban board layout.
 
         Args:
+            log: A logging instance
             parent: Parent widget to attach this tab manager to. Used by Qt for
                     widget hierarchy and memory management. If None, creates a
                     top-level widget.
         """
         super().__init__(parent)
+        self.log = log
+
         self.task_queue_tab = QWidget()
         self.kanban_tab = QWidget()
         self.statistics_tab = QWidget()
@@ -78,6 +83,7 @@ class KanbanTabManager(QTabWidget):
         """
         column = KanbanColumn(name, number)
         self.column_layout.addWidget(column)
+        self.log.info(f"Added Kanban colum: {name}")
 
     # ==========================================================================================
 
