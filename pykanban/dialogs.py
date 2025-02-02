@@ -1,7 +1,6 @@
 import logging
 import os
 
-# from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -193,6 +192,139 @@ class NewDatabaseDialog(QDialog):
         self.selected_path = path
         self.log.info(f"Database creation dialog validated successfully for: {db_path}")
         self.accept()
+
+
+# ==========================================================================================
+# ==========================================================================================
+
+
+class DeleteDatabaseDialog(QDialog):
+    """
+    A dialog window for selecting and deleting an existing database file.
+    This dialog provides a user interface with file selection, confirmation
+    steps, and safety checks before deletion.
+
+    The dialog includes:
+    - A file browser to select .db files
+    - A warning message about the irreversible nature of deletion
+    - Confirmation buttons with cancel option
+    - Input validation and safety checks
+
+    Attributes:
+        log (logging.Logger): Logger instance for tracking operations
+        selected_path (str): Stores the currently selected database path
+        path_edit (QLineEdit): Display field for selected database path
+        delete_button (QPushButton): Button to confirm deletion (disabled by default)
+
+    Args:
+        log (logging.Logger): Logger instance for tracking operations
+        parent (QWidget, optional): Parent widget for this dialog. Defaults to None.
+    """
+
+    def __init__(self, log: logging.Logger, parent=None):
+        """
+        Initialize the delete database dialog.
+
+        Args:
+            log (logging.Logger): Logger instance for tracking operations
+            parent (QWidget, optional): Parent widget for this dialog. Defaults to None.
+        """
+        super().__init__(parent)
+        self.log = log
+        self.selected_path = ""
+        self._setup_ui()
+        self.log.info("Initialized DeleteDatabaseDialog")
+
+    # ------------------------------------------------------------------------------------------
+
+    def get_database_path(self) -> str | None:
+        """Return the selected database path
+
+        Returns:
+            str | None: Path to the selected database if valid, None otherwise
+        """
+        return self.selected_path if self.selected_path else None
+
+    # ------------------------------------------------------------------------------------------
+
+    def _setup_ui(self):
+        """Initialize the dialog's user interface"""
+        self.setWindowTitle("Delete Database")
+        self.setModal(True)
+
+        # Create layouts
+        main_layout = QVBoxLayout(self)
+        path_layout = QHBoxLayout()
+        button_layout = QHBoxLayout()
+
+        # Create widgets for database selection
+        path_label = QLabel("Database:")
+        self.path_edit = QLineEdit()
+        self.path_edit.setReadOnly(True)
+        browse_button = QPushButton("Browse...")
+        browse_button.clicked.connect(self._browse_database)
+
+        # Create delete/cancel buttons
+        self.delete_button = QPushButton("Delete")
+        self.delete_button.clicked.connect(self._confirm_deletion)
+        self.delete_button.setEnabled(False)  # Disabled until valid selection
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+
+        # Add warning label
+        warning_label = QLabel("⚠️ Warning: Database deletion cannot be undone!")
+        warning_label.setStyleSheet("color: red;")
+
+        # Arrange path selection widgets
+        path_layout.addWidget(path_label)
+        path_layout.addWidget(self.path_edit)
+        path_layout.addWidget(browse_button)
+
+        # Arrange buttons
+        button_layout.addWidget(self.delete_button)
+        button_layout.addWidget(cancel_button)
+
+        # Add all layouts to main layout
+        main_layout.addLayout(path_layout)
+        main_layout.addWidget(warning_label)
+        main_layout.addLayout(button_layout)
+
+    # ------------------------------------------------------------------------------------------
+
+    def _browse_database(self):
+        """Open file dialog to select an existing database"""
+        self.log.debug("Opening database selection dialog")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Database",
+            "",
+            "SQLite Database (*.db)",
+        )
+        if file_path:
+            self.selected_path = file_path
+            self.path_edit.setText(file_path)
+            self.delete_button.setEnabled(True)
+            self.log.info(f"User selected database: {file_path}")
+
+    # ------------------------------------------------------------------------------------------
+
+    def _confirm_deletion(self):
+        """Show confirmation dialog before accepting"""
+        if not self.selected_path:
+            return
+
+        confirm = QMessageBox.warning(
+            self,
+            "Confirm Deletion",
+            f"Are you sure you want to delete the database:\n{self.selected_path}\n\n"
+            "This action cannot be undone!",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+
+        if confirm == QMessageBox.StandardButton.Ok:
+            self.accept()
 
 
 # ==========================================================================================

@@ -1,9 +1,10 @@
 import logging
+import os
 
 from PyQt6.QtGui import QAction, QFont
 from PyQt6.QtWidgets import QDialog, QMenu, QMenuBar, QMessageBox
 
-from pykanban.dialogs import NewDatabaseDialog
+from pykanban.dialogs import DeleteDatabaseDialog, NewDatabaseDialog
 
 # ==========================================================================================
 # ==========================================================================================
@@ -84,9 +85,51 @@ class FileMenu:
 
     def delete_db(self):
         """
-        Method that encodes the functionality of the Delete attribute
+        Method that handles database deletion with confirmation. Only allows deletion
+        of .db files and prevents deletion of currently active database.
         """
-        print("Deleted database")
+        dialog = DeleteDatabaseDialog(self.log, self.menu)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            db_path = dialog.get_database_path()
+            if not db_path:
+                self.log.warning("No database selected for deletion")
+                return
+
+            # Verify file extension
+            if not db_path.lower().endswith(".db"):
+                error_msg = "Selected file is not a database (.db) file"
+                self.log.error(error_msg)
+                QMessageBox.critical(self.menu, "Error", error_msg)
+                return
+
+            # Check if this is the currently active database
+            current_db_path = (
+                self.controller.kanban_db.db_path if self.controller.kanban_db else None
+            )
+            if current_db_path and os.path.abspath(db_path) == os.path.abspath(
+                current_db_path
+            ):
+                error_msg = "Cannot delete the currently active database"
+                self.log.error(error_msg)
+                QMessageBox.critical(self.menu, "Error", error_msg)
+                return
+
+            try:
+                os.remove(db_path)
+                self.log.info(f"Successfully deleted database: {db_path}")
+                QMessageBox.information(
+                    self.menu, "Success", "Database deleted successfully."
+                )
+            except OSError as e:
+                error_msg = f"Failed to delete database: {e}"
+                self.log.error(error_msg)
+                QMessageBox.critical(self.menu, "Error", error_msg)
+            except Exception as e:
+                error_msg = f"Unexpected error while deleting database: {str(e)}"
+                self.log.error(error_msg)
+                QMessageBox.critical(self.menu, "Error", error_msg)
+        else:
+            self.log.info("User cancelled database deletion")
 
     # ==========================================================================================
     # PRIVATE LIKE METHODS
