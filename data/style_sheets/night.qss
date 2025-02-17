@@ -150,30 +150,25 @@ QCheckBox::indicator:unchecked {
 QWidget#columnContainer {
     background-color: rgb(95, 95, 95);  /* Match tab background */
 }
-
 QWidget#kanbanScrollArea {
     background-color: rgb(95, 95, 95);  /* Match tab background */
     border: none;
 }
-
 /* Individual column styling */
 QWidget#kanbanColumn {
     background-color: rgb(60, 60, 60);  /* Dark background for columns */
-    border: 2px solid rgb(80, 80, 80);  /* Stronger border */
-    border-radius: 10px;
-    margin: 8px;
+    border: 5px solid rgb(80, 80, 80);  /* Stronger border */
+    border-radius: 15px;
 }
-
 QWidget#columnHeader {
     font-size: 14px;
     font-weight: bold;
     padding: 4px;
-    background-color: rgb(75, 75, 75);  /* Slightly lighter than column */
-    color: rgb(220, 220, 220);  /* Light text for contrast */
+    background-color: #b8daff;
+    color: #000000;
     border: 1px solid rgb(90, 90, 90);
-    border-radius: 8px;
+    border-radius: 15px;
 }
-
 QWidget#columnScrollArea {
     border: none;
     background-color: transparent;
@@ -181,6 +176,7 @@ QWidget#columnScrollArea {
 
 QWidget#columnTaskContainer {
     background-color: rgb(60, 60, 60);  /* Match column background */
+    border-radius: 15px;
 }
 
 /* Scroll area styling */

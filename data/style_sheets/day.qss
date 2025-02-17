@@ -186,7 +186,6 @@ QRadioButton:hover {
 QRadioButton:disabled {
     color: #808086;
 }
-
 /* ============================= */
 /*        KANBAN BOARD           */
 /* ============================= */
