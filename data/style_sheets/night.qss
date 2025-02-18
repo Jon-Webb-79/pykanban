@@ -164,8 +164,6 @@ QWidget#columnHeader {
     font-size: 14px;
     font-weight: bold;
     padding: 4px;
-    background-color: #b8daff;
-    color: #000000;
     border: 1px solid rgb(90, 90, 90);
     border-radius: 15px;
 }

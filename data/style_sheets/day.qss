@@ -210,8 +210,6 @@ QWidget#columnHeader {
     font-size: 14px;
     font-weight: bold;
     padding: 4px;
-    background-color: #b8daff;
-    color: #333333;
     border: 1px solid #dcdcdc;
     border-radius: 15px;
 }

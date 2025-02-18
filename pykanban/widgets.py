@@ -55,6 +55,55 @@ class DayNightRadioButton(QWidget):
 # ==========================================================================================
 
 
+class KanbanColors:
+    """Class to manage Kanban board colors
+
+    This class centralizes color management for the Kanban board, providing
+    default colors and methods to modify them.
+    """
+
+    DEFAULT_HEADER_BG = "#b8daff"  # Light blue background
+    DEFAULT_HEADER_TEXT = "#000000"  # Black text
+
+    # ------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def get_default_colors():
+        """Get the default colors for a new Kanban column
+
+        Returns:
+            tuple: (header_background_color, header_text_color)
+        """
+        return (KanbanColors.DEFAULT_HEADER_BG, KanbanColors.DEFAULT_HEADER_TEXT)
+
+    # ------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def validate_color(color: str) -> bool:
+        """Validate that a color string is a valid hex color code
+
+        Args:
+            color: Color string to validate
+
+        Returns:
+            bool: True if valid hex color, False otherwise
+        """
+        if not isinstance(color, str):
+            return False
+
+        # Check if it's a valid hex color code
+        if not color.startswith("#"):
+            return False
+
+        # Remove the # and check if remaining chars are valid hex
+        color = color.lstrip("#")
+        return len(color) in (6, 8) and all(c in "0123456789ABCDEFabcdef" for c in color)
+
+
+# ==========================================================================================
+# ==========================================================================================
+
+
 class KanbanColumn(QWidget):
     """A widget representing a single column in a Kanban board"""
 
@@ -62,8 +111,8 @@ class KanbanColumn(QWidget):
         self,
         name: str,
         number: int = 0,
-        column_color: str = "#b8daff",
-        text_color: str = "#000000",
+        column_color: str = KanbanColors.DEFAULT_HEADER_BG,
+        text_color: str = KanbanColors.DEFAULT_HEADER_TEXT,
         parent: QWidget = None,
     ):
         """Initialize the Kanban column
@@ -71,21 +120,58 @@ class KanbanColumn(QWidget):
         Args:
             name: Text to display in column header
             number: Initial number of tasks (defaults to 0)
-            column_color: Background color for header (defaults to light blue)
-            text_color: Text color for header (defaults to black)
+            column_color: Background color for header
+            text_color: Text color for header
             parent: Parent widget (optional)
         """
-        # Call parent constructor first
         super().__init__(parent)
 
-        # Store instance variables
         self.name = name
         self.number = number
-        self.column_color = column_color
-        self.text_color = text_color
+        self._column_color = column_color
+        self._text_color = text_color
 
-        # Setup the UI
         self._setup_ui()
+
+    # ------------------------------------------------------------------------------------------
+
+    @property
+    def column_color(self) -> str:
+        """Get the current column header background color"""
+        return self._column_color
+
+    # ------------------------------------------------------------------------------------------
+
+    @column_color.setter
+    def column_color(self, color: str):
+        """Set a new column header background color
+
+        Args:
+            color: New color in hex format (#RRGGBB)
+        """
+        if KanbanColors.validate_color(color):
+            self._column_color = color
+            self._update_header_style()
+
+    # ------------------------------------------------------------------------------------------
+
+    @property
+    def text_color(self) -> str:
+        """Get the current column header text color"""
+        return self._text_color
+
+    # ------------------------------------------------------------------------------------------
+
+    @text_color.setter
+    def text_color(self, color: str):
+        """Set a new column header text color
+
+        Args:
+            color: New color in hex format (#RRGGBB)
+        """
+        if KanbanColors.validate_color(color):
+            self._text_color = color
+            self._update_header_style()
 
     # ------------------------------------------------------------------------------------------
 
@@ -94,7 +180,25 @@ class KanbanColumn(QWidget):
         self.number = number
         self.header.setText(f"{self.name} / {self.number}")
 
-    # ================================================================================
+    # ==========================================================================================
+
+    def _update_header_style(self):
+        """Update the header's style sheet with current colors"""
+        self.header.setStyleSheet(
+            f"""
+            QLabel {{
+                background-color: {self._column_color};
+                color: {self._text_color};
+                border: 1px solid #dcdcdc;
+                border-radius: 15px;
+                padding: 4px;
+                font-size: 14px;
+                font-weight: bold;
+            }}
+        """
+        )
+
+    # ------------------------------------------------------------------------------------------
 
     def _setup_ui(self):
         """Configure the column's UI layout and styling"""
@@ -109,13 +213,8 @@ class KanbanColumn(QWidget):
         self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.header.setFixedHeight(40)
 
-        # Apply custom colors to header
-        self.header.setStyleSheet(
-            f"""
-            background-color: {self.column_color};
-            color: {self.text_color};
-        """
-        )
+        # Apply initial header styling
+        self._update_header_style()
 
         self.task_container = QWidget()
         self.task_container.setObjectName("columnTaskContainer")
