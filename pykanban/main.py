@@ -110,18 +110,17 @@ class KanbanViewManager(QMainWindow):
     # PRIVATE-LIKE METHODS
 
     def _create_initial_widgets(self) -> None:
-        """
-        This method instantiates all widgets for the todo_list application
-        """
+        """This method instantiates all widgets for the todo_list application"""
         # Set control actuators that are persistent (not related to tabs)
         self.day_night_radio_button = DayNightRadioButton()
 
-        # Setup Tab widget
-        self.tabs = KanbanTabManager(self.logger, self.central_widget)
-        # self.tabs = QTabWidget(self.central_widget)
+        # Setup Tab widget - Pass both db_manager and logger
+        self.tabs = KanbanTabManager(
+            db_manager=None, log=self.logger, parent=self.central_widget
+        )
 
         # Ensure the radio button stays compact
-        self.day_night_radio_button.setFixedWidth(150)  # Adjust width as needed
+        self.day_night_radio_button.setFixedWidth(150)
 
     # ------------------------------------------------------------------------------------------
 
@@ -211,6 +210,7 @@ class KanbanControllerManager(KanbanViewManager):
         self.kanban_db = KanbanDatabaseManager(db_path, self.log)
         result = self.kanban_db.initialize_database()
         if result.success:
+            self.tabs.db_manager = self.kanban_db
             self.load_kanban_board()
         return result
 
@@ -223,14 +223,6 @@ class KanbanControllerManager(KanbanViewManager):
             if result.success:
                 for name, number, column_color, text_color in result.data:
                     self.tabs.add_column(name, number, column_color, text_color)
-
-    # def load_kanban_board(self):
-    #     """Load and display the Kanban board columns"""
-    #     if self.kanban_db:
-    #         result = self.kanban_db.load_columns()
-    #         if result.success:
-    #             for name, number in result.data:
-    #                 self.tabs.add_column(name, number)
 
 
 # ==========================================================================================

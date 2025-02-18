@@ -917,35 +917,65 @@ class KanbanDatabaseManager:
             except Exception as e:
                 return QueryResult(False, None, f"Failed to load columns: {str(e)}")
 
-    # def load_columns(self) -> QueryResult:
-    #     """Load all columns from the database
-    #
-    #     Returns:
-    #         QueryResult with list of (name, number) tuples ordered by column order
-    #     """
-    #     query = """
-    #     SELECT Name, Number
-    #     FROM Columns
-    #     ORDER BY "Order";
-    #     """
-    #
-    #     with self.db_manager.connection() as db:
-    #         try:
-    #             result = db.execute_query(query)
-    #             if not result.success:
-    #                 return result
-    #
-    #             columns = []
-    #             query_result = result.data
-    #             while query_result.next():
-    #                 name = query_result.value("Name")
-    #                 number = query_result.value("Number")
-    #                 columns.append((name, number))
-    #
-    #             return QueryResult(True, columns, "Columns loaded successfully")
-    #
-    #         except Exception as e:
-    #             return QueryResult(False, None, f"Failed to load columns: {str(e)}")
+    def update_column_color(
+        self, column_name: str, color_type: str, color: str
+    ) -> QueryResult:
+        """Update a column's color in the database
+
+        Args:
+            column_name: Name of the column to update
+            color_type: Either 'ColumnColor' or 'TextColor'
+            color: New color value in hex format
+
+        Returns:
+            QueryResult indicating success/failure
+        """
+        if color_type not in ["ColumnColor", "TextColor"]:
+            return QueryResult(False, None, "Invalid color type specified")
+
+        update_query = f"""
+        UPDATE Columns
+        SET {color_type} = ?
+        WHERE Name = ?;
+        """
+
+        with self.db_manager.connection() as db:
+            try:
+                # Begin transaction
+                begin_result = db.begin_transaction()
+                if not begin_result.success:
+                    self.log.error(f"Failed to begin transaction: {begin_result.message}")
+                    return begin_result
+
+                # Update the color
+                query_result = db.execute_query(update_query, (color, column_name))
+                if not query_result.success:
+                    self.log.error(
+                        f"Failed to update column color: {query_result.message}"
+                    )
+                    db.rollback_transaction()
+                    return query_result
+
+                # Commit the changes
+                commit_result = db.commit_transaction()
+                if not commit_result.success:
+                    self.log.error(
+                        f"Failed to commit transaction: {commit_result.message}"
+                    )
+                    db.rollback_transaction()
+                    return commit_result
+
+                self.log.info(
+                    f"Successfully updated {color_type} for column: {column_name}"
+                )
+                return QueryResult(True, None, "Column color updated successfully")
+
+            except Exception as e:
+                db.rollback_transaction()
+                self.log.error(f"Unexpected error updating column color: {str(e)}")
+                return QueryResult(
+                    False, None, f"Failed to update column color: {str(e)}"
+                )
 
 
 # ==========================================================================================

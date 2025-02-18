@@ -1,8 +1,11 @@
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QButtonGroup,
+    QColorDialog,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QRadioButton,
     QSizePolicy,
     QVBoxLayout,
@@ -114,6 +117,7 @@ class KanbanColumn(QWidget):
         column_color: str = KanbanColors.DEFAULT_HEADER_BG,
         text_color: str = KanbanColors.DEFAULT_HEADER_TEXT,
         parent: QWidget = None,
+        db_manager=None,
     ):
         """Initialize the Kanban column
 
@@ -123,6 +127,7 @@ class KanbanColumn(QWidget):
             column_color: Background color for header
             text_color: Text color for header
             parent: Parent widget (optional)
+            db_manager: Database manager instance
         """
         super().__init__(parent)
 
@@ -130,6 +135,11 @@ class KanbanColumn(QWidget):
         self.number = number
         self._column_color = column_color
         self._text_color = text_color
+        self.db_manager = db_manager
+
+        # Enable right-click menu
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
 
         self._setup_ui()
 
@@ -182,10 +192,65 @@ class KanbanColumn(QWidget):
 
     # ==========================================================================================
 
+    def _show_context_menu(self, position):
+        """Show the context menu for the column when right-clicked
+
+        Args:
+            position: Mouse position where menu should appear
+        """
+        # Create the main context menu
+        context_menu = QMenu(self)
+
+        # Create "Column Colors" submenu
+        color_menu = QMenu("Column Colors", self)
+
+        # Add color options to the submenu
+        header_action = color_menu.addAction("Header Color")
+        text_action = color_menu.addAction("Text Color")
+
+        # Add the color submenu to main context menu
+        context_menu.addMenu(color_menu)
+
+        # Show the menu at the mouse position and get selected action
+        action = context_menu.exec(self.mapToGlobal(position))
+
+        # Handle the selected action
+        if action == header_action:
+            self._change_header_color()
+        elif action == text_action:
+            self._change_text_color()
+
+    # ------------------------------------------------------------------------------------------
+
+    def _change_header_color(self):
+        """Open color dialog for header background color"""
+        color = QColorDialog.getColor(
+            QColor(self._column_color), self, "Select Header Color"
+        )
+        if color.isValid():
+            new_color = color.name()
+            self.column_color = new_color
+            # Update database
+            if self.db_manager:
+                self.db_manager.update_column_color(self.name, "ColumnColor", new_color)
+
+    # ------------------------------------------------------------------------------------------
+
+    def _change_text_color(self):
+        """Open color dialog for header text color"""
+        color = QColorDialog.getColor(QColor(self._text_color), self, "Select Text Color")
+        if color.isValid():
+            new_color = color.name()
+            self.text_color = new_color
+            # Update database
+            if self.db_manager:
+                self.db_manager.update_column_color(self.name, "TextColor", new_color)
+
+    # ------------------------------------------------------------------------------------------
+
     def _update_header_style(self):
         """Update the header's style sheet with current colors"""
-        self.header.setStyleSheet(
-            f"""
+        style = f"""
             QLabel {{
                 background-color: {self._column_color};
                 color: {self._text_color};
@@ -196,7 +261,7 @@ class KanbanColumn(QWidget):
                 font-weight: bold;
             }}
         """
-        )
+        self.header.setStyleSheet(style)
 
     # ------------------------------------------------------------------------------------------
 

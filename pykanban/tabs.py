@@ -31,19 +31,16 @@ class KanbanTabManager(QTabWidget):
         column_layout: Layout managing Kanban columns
     """
 
-    def __init__(self, log: logging.Logger, parent=None):
+    def __init__(self, db_manager=None, log: logging.Logger = None, parent=None):
         """Initialize tab manager with empty tabs
 
-        Creates four empty tabs for different views: task queue, Kanban board,
-        statistics, and blocked tasks. Sets up the Kanban board layout.
-
         Args:
-            log: A logging instance
-            parent: Parent widget to attach this tab manager to. Used by Qt for
-                    widget hierarchy and memory management. If None, creates a
-                    top-level widget.
+            db_manager: Database manager instance
+            log: Logger instance
+            parent: Parent widget
         """
         super().__init__(parent)
+        self.db_manager = db_manager
         self.log = log
 
         self.task_queue_tab = QWidget()
@@ -81,23 +78,26 @@ class KanbanTabManager(QTabWidget):
         column_color: str = "#b8daff",
         text_color: str = "#000000",
     ):
-        """Add new column to Kanban board
-
-        Args:
-            name: Column header text
-            number: Initial task count
-            column_color: Background color for column header
-            text_color: Text color for column header
-        """
+        """Add new column to Kanban board"""
         column = KanbanColumn(
             name=name,
             number=number,
             column_color=column_color,
             text_color=text_color,
             parent=self,
+            db_manager=self.db_manager,
         )
         self.column_layout.addWidget(column)
-        self.log.info(f"Added Kanban column: {name} with color {column_color}")
+        if self.log:
+            self.log.info(f"Added Kanban column: {name} with color {column_color}")
+
+    @property
+    def db_manager(self):
+        return self._db_manager
+
+    @db_manager.setter
+    def db_manager(self, manager):
+        self._db_manager = manager
 
     # ==========================================================================================
 
