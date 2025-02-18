@@ -56,58 +56,66 @@ class DayNightRadioButton(QWidget):
 
 
 class KanbanColumn(QWidget):
-    """A widget representing a single column in a Kanban board
+    """A widget representing a single column in a Kanban board"""
 
-    Creates a vertical column with a header showing name and task count,
-    and a container area for tasks.
-
-    Attributes:
-        name (str): Name displayed in column header
-        number (int): Number of tasks in column
-    """
-
-    def __init__(self, name: str, number: int = 0, parent=None):
+    def __init__(
+        self,
+        name: str,
+        number: int = 0,
+        column_color: str = "#b8daff",
+        text_color: str = "#000000",
+        parent: QWidget = None,
+    ):
         """Initialize the Kanban column
 
         Args:
             name: Text to display in column header
             number: Initial number of tasks (defaults to 0)
+            column_color: Background color for header (defaults to light blue)
+            text_color: Text color for header (defaults to black)
             parent: Parent widget (optional)
         """
+        # Call parent constructor first
         super().__init__(parent)
+
+        # Store instance variables
         self.name = name
         self.number = number
+        self.column_color = column_color
+        self.text_color = text_color
+
+        # Setup the UI
         self._setup_ui()
 
     # ------------------------------------------------------------------------------------------
 
     def update_task_count(self, number: int):
-        """Update the number of tasks shown in column header
-
-        Args:
-            number: New task count to display
-        """
+        """Update the number of tasks shown in column header"""
         self.number = number
         self.header.setText(f"{self.name} / {self.number}")
 
-    # ==========================================================================================
+    # ================================================================================
 
     def _setup_ui(self):
-        """Configure the column's UI layout and styling
-
-        Creates header label and task container with vertical layout.
-        Sets fixed column width and expanding height.
-        """
+        """Configure the column's UI layout and styling"""
         self.setObjectName("kanbanColumn")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(5)
 
-        self.setFixedWidth(300)  # Use setFixedWidth instead
+        self.setFixedWidth(300)
         self.header = QLabel(f"{self.name} / {self.number}")
         self.header.setObjectName("columnHeader")
         self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.header.setFixedHeight(40)
+
+        # Apply custom colors to header
+        self.header.setStyleSheet(
+            f"""
+            background-color: {self.column_color};
+            color: {self.text_color};
+        """
+        )
 
         self.task_container = QWidget()
         self.task_container.setObjectName("columnTaskContainer")

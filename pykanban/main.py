@@ -221,8 +221,16 @@ class KanbanControllerManager(KanbanViewManager):
         if self.kanban_db:
             result = self.kanban_db.load_columns()
             if result.success:
-                for name, number in result.data:
-                    self.tabs.add_column(name, number)
+                for name, number, column_color, text_color in result.data:
+                    self.tabs.add_column(name, number, column_color, text_color)
+
+    # def load_kanban_board(self):
+    #     """Load and display the Kanban board columns"""
+    #     if self.kanban_db:
+    #         result = self.kanban_db.load_columns()
+    #         if result.success:
+    #             for name, number in result.data:
+    #                 self.tabs.add_column(name, number)
 
 
 # ==========================================================================================

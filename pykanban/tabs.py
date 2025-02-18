@@ -74,16 +74,30 @@ class KanbanTabManager(QTabWidget):
 
     # ------------------------------------------------------------------------------------------
 
-    def add_column(self, name: str, number: int = 0):
+    def add_column(
+        self,
+        name: str,
+        number: int = 0,
+        column_color: str = "#b8daff",
+        text_color: str = "#000000",
+    ):
         """Add new column to Kanban board
 
         Args:
             name: Column header text
             number: Initial task count
+            column_color: Background color for column header
+            text_color: Text color for column header
         """
-        column = KanbanColumn(name, number)
+        column = KanbanColumn(
+            name=name,
+            number=number,
+            column_color=column_color,
+            text_color=text_color,
+            parent=self,
+        )
         self.column_layout.addWidget(column)
-        self.log.info(f"Added Kanban colum: {name}")
+        self.log.info(f"Added Kanban column: {name} with color {column_color}")
 
     # ==========================================================================================
 

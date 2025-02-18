@@ -679,13 +679,14 @@ class KanbanDatabaseManager:
     def initialize_database(self) -> QueryResult:
         """Create initial schema for a new Kanban database with default columns"""
         create_columns_table = """
-        CREATE TABLE Columns (
+            CREATE TABLE Columns (
             Name TEXT PRIMARY KEY,
             "Order" INTEGER NOT NULL UNIQUE,
-            Number INTEGER NOT NULL DEFAULT 0
+            Number INTEGER NOT NULL DEFAULT 0,
+            ColumnColor TEXT NOT NULL DEFAULT '#b8daff',
+            TextColor TEXT NOT NULL DEFAULT '#000000'
         );
         """
-
         with self.db_manager.connection() as db:
             try:
                 # Begin transaction for schema creation
@@ -705,18 +706,19 @@ class KanbanDatabaseManager:
 
                 # Add default columns
                 default_columns = [
-                    ("Ready to Start", 1),
-                    ("In Progress", 2),
-                    ("Complete", 3),
+                    ("Ready to Start", 1, "#b8daff", "#000000"),
+                    ("In Progress", 2, "#b8daff", "#000000"),
+                    ("Complete", 3, "#b8daff", "#000000"),
                 ]
 
                 insert_query = """
-                INSERT INTO Columns (Name, "Order", Number)
-                VALUES (?, ?, 0);
+                INSERT INTO Columns (Name, "Order", Number, ColumnColor, TextColor)
+                VALUES (?, ?, 0, ?, ?);
                 """
-
-                for name, order in default_columns:
-                    column_result = db.execute_query(insert_query, (name, order))
+                for name, order, column_color, text_color in default_columns:
+                    column_result = db.execute_query(
+                        insert_query, (name, order, column_color, text_color)
+                    )
                     if not column_result.success:
                         self.log.error(
                             f"""Failed to create default col
@@ -750,19 +752,27 @@ class KanbanDatabaseManager:
 
     # ------------------------------------------------------------------------------------------
 
-    def add_column(self, name: str, order: int) -> QueryResult:
+    def add_column(
+        self,
+        name: str,
+        order: int,
+        column_color: str = "#b8daff",
+        text_color: str = "#000000",
+    ) -> QueryResult:
         """Add a new column to the Kanban board
 
         Args:
             name: Name of the column
             order: Order of the column (left to right)
+            column_color: Color of the column header background (defaults to light blue)
+            text_color: Color of the column header text (defaults to black)
 
         Returns:
             QueryResult indicating success/failure
         """
         insert_query = """
-        INSERT INTO Columns (Name, "Order", Number)
-        VALUES (?, ?, 0);
+        INSERT INTO Columns (Name, "Order", Number, ColumnColor, TextColor)
+        VALUES (?, ?, 0, ?, ?);
         """
 
         with self.db_manager.connection() as db:
@@ -774,7 +784,9 @@ class KanbanDatabaseManager:
                     return begin_result
 
                 # Insert the new column
-                query_result = db.execute_query(insert_query, (name, order))
+                query_result = db.execute_query(
+                    insert_query, (name, order, column_color, text_color)
+                )
                 if not query_result.success:
                     self.log.error(
                         f"Failed to create column {name}: {query_result.message}"
@@ -876,10 +888,11 @@ class KanbanDatabaseManager:
         """Load all columns from the database
 
         Returns:
-            QueryResult with list of (name, number) tuples ordered by column order
+            QueryResult with list of (name, number, column_color, text_color) tuples
+            ordered by column order
         """
         query = """
-        SELECT Name, Number
+        SELECT Name, Number, ColumnColor, TextColor
         FROM Columns
         ORDER BY "Order";
         """
@@ -895,12 +908,44 @@ class KanbanDatabaseManager:
                 while query_result.next():
                     name = query_result.value("Name")
                     number = query_result.value("Number")
-                    columns.append((name, number))
+                    column_color = query_result.value("ColumnColor")
+                    text_color = query_result.value("TextColor")
+                    columns.append((name, number, column_color, text_color))
 
                 return QueryResult(True, columns, "Columns loaded successfully")
 
             except Exception as e:
                 return QueryResult(False, None, f"Failed to load columns: {str(e)}")
+
+    # def load_columns(self) -> QueryResult:
+    #     """Load all columns from the database
+    #
+    #     Returns:
+    #         QueryResult with list of (name, number) tuples ordered by column order
+    #     """
+    #     query = """
+    #     SELECT Name, Number
+    #     FROM Columns
+    #     ORDER BY "Order";
+    #     """
+    #
+    #     with self.db_manager.connection() as db:
+    #         try:
+    #             result = db.execute_query(query)
+    #             if not result.success:
+    #                 return result
+    #
+    #             columns = []
+    #             query_result = result.data
+    #             while query_result.next():
+    #                 name = query_result.value("Name")
+    #                 number = query_result.value("Number")
+    #                 columns.append((name, number))
+    #
+    #             return QueryResult(True, columns, "Columns loaded successfully")
+    #
+    #         except Exception as e:
+    #             return QueryResult(False, None, f"Failed to load columns: {str(e)}")
 
 
 # ==========================================================================================
