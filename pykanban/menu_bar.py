@@ -4,7 +4,8 @@ import os
 from PyQt6.QtGui import QAction, QFont
 from PyQt6.QtWidgets import QDialog, QMenu, QMenuBar, QMessageBox
 
-from pykanban.dialogs import DeleteDatabaseDialog, NewDatabaseDialog
+from pykanban.database import KanbanDatabaseManager
+from pykanban.dialogs import DeleteDatabaseDialog, NewDatabaseDialog, OpenDatabaseDialog
 
 # ==========================================================================================
 # ==========================================================================================
@@ -41,10 +42,52 @@ class FileMenu:
     # ------------------------------------------------------------------------------------------
 
     def open_db(self):
-        """
-        Method that encodes the functionality of the Open attribute
-        """
-        print("Opened Database")
+        """Method that handles opening an existing database"""
+        # Check if a database is already open
+        if self.controller.kanban_db:
+            reply = QMessageBox.question(
+                self.menu,
+                "Database Already Open",
+                "A database is open. Would you like to close it and open a new one?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+
+            if reply == QMessageBox.StandardButton.No:
+                return
+
+            # Close the current database
+            self.close_db()
+
+        # Show the open database dialog
+        dialog = OpenDatabaseDialog(self.log, self.menu)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            db_path = dialog.get_database_path()
+            try:
+                # Create new database manager
+                self.controller.kanban_db = KanbanDatabaseManager(db_path, self.log)
+
+                # Load the Kanban board
+                self.controller.load_kanban_board()
+
+                self.log.info(f"Successfully opened database: {db_path}")
+                QMessageBox.information(
+                    self.menu, "Success", "Database opened successfully."
+                )
+
+            except Exception as e:
+                error_msg = f"Error opening database: {str(e)}"
+                self.log.error(error_msg)
+                QMessageBox.critical(self.menu, "Error", error_msg)
+                self.controller.kanban_db = None
+        else:
+            self.log.info("User cancelled database opening")
+
+    # def open_db(self):
+    #     """
+    #     Method that encodes the functionality of the Open attribute
+    #     """
+    #     print("Opened Database")
 
     # ------------------------------------------------------------------------------------------
 
@@ -94,12 +137,6 @@ class FileMenu:
             self.log.error(f"Failed to close database: {result.message}")
             # Try to clear the board anyway
             self._clear_kanban_board()
-
-    # def close_db(self):
-    #     """
-    #     Method that encodes the functionality of the Close attribute
-    #     """
-    #     print("Closed databases")
 
     # ------------------------------------------------------------------------------------------
 

@@ -329,4 +329,125 @@ class DeleteDatabaseDialog(QDialog):
 
 # ==========================================================================================
 # ==========================================================================================
+
+
+class OpenDatabaseDialog(QDialog):
+    """Dialog for opening an existing database file
+
+    Provides a user interface for selecting and validating a .db file.
+    """
+
+    def __init__(self, log: logging.Logger, parent=None):
+        """Initialize the open database dialog
+
+        Args:
+            log: Logger instance for tracking operations
+            parent: Parent widget for this dialog
+        """
+        super().__init__(parent)
+        self.log = log
+        self.selected_path = ""
+        self._setup_ui()
+        self.log.info("Initialized OpenDatabaseDialog")
+
+    # ------------------------------------------------------------------------------------------
+
+    def get_database_path(self) -> str | None:
+        """Return the selected database path
+
+        Returns:
+            str | None: Path to the selected database if valid, None otherwise
+        """
+        return self.selected_path if self.selected_path else None
+
+    # ==========================================================================================
+
+    def _setup_ui(self):
+        """Initialize the dialog's user interface"""
+        self.setWindowTitle("Open Database")
+        self.setModal(True)
+
+        # Create layouts
+        main_layout = QVBoxLayout(self)
+        path_layout = QHBoxLayout()
+        button_layout = QHBoxLayout()
+
+        # Create widgets for path selection
+        path_label = QLabel("Database File:")
+        self.path_edit = QLineEdit()
+        self.path_edit.setReadOnly(True)
+        browse_button = QPushButton("Browse...")
+        browse_button.clicked.connect(self._browse_database)
+
+        # Create accept/cancel buttons
+        self.open_button = QPushButton("Open")
+        self.open_button.clicked.connect(self._validate_and_accept)
+        self.open_button.setEnabled(False)  # Disabled until valid selection
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+
+        # Arrange path selection widgets
+        path_layout.addWidget(path_label)
+        path_layout.addWidget(self.path_edit)
+        path_layout.addWidget(browse_button)
+
+        # Arrange buttons
+        button_layout.addWidget(self.open_button)
+        button_layout.addWidget(cancel_button)
+
+        # Add layouts to main layout
+        main_layout.addLayout(path_layout)
+        main_layout.addLayout(button_layout)
+
+        self.log.debug("Completed UI setup for OpenDatabaseDialog")
+
+    # ==========================================================================================
+
+    def _browse_database(self):
+        """Open file dialog to select an existing database"""
+        self.log.debug("Opening database selection dialog")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Database", "", "SQLite Database (*.db)"
+        )
+
+        if file_path:
+            if file_path.lower().endswith(".db"):
+                self.selected_path = file_path
+                self.path_edit.setText(file_path)
+                self.open_button.setEnabled(True)
+                self.log.info(f"User selected database: {file_path}")
+            else:
+                self.log.warning(f"Invalid file selected: {file_path}")
+                QMessageBox.warning(
+                    self,
+                    "Invalid File Type",
+                    "Please select a valid SQLite database file (*.db)",
+                )
+                self.open_button.setEnabled(False)
+
+    # ==========================================================================================
+
+    def _validate_and_accept(self):
+        """Perform final validation before accepting dialog"""
+        if not self.selected_path:
+            self.log.warning("No database file selected")
+            QMessageBox.warning(
+                self, "Invalid Selection", "Please select a database file."
+            )
+            return
+
+        if not os.path.exists(self.selected_path):
+            self.log.warning(f"Selected database does not exist: {self.selected_path}")
+            QMessageBox.warning(
+                self, "File Not Found", "The selected database file no longer exists."
+            )
+            return
+
+        self.log.info(f"Database selection validated: {self.selected_path}")
+        self.accept()
+
+
+# ==========================================================================================
+# ==========================================================================================
 # eof
