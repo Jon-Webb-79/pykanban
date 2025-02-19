@@ -232,7 +232,18 @@ class KanbanColumn(QWidget):
             self.column_color = new_color
             # Update database
             if self.db_manager:
-                self.db_manager.update_column_color(self.name, "ColumnColor", new_color)
+                result = self.db_manager.update_column_color(
+                    self.name, "ColumnColor", new_color
+                )
+                if result.success:
+                    self.db_manager.log.info(
+                        f"Column '{self.name}' header color changed to {new_color}"
+                    )
+                else:
+                    self.db_manager.log.error(
+                        f"""Failed to update header color for column
+                    '{self.name}': {result.message}"""
+                    )
 
     # ------------------------------------------------------------------------------------------
 
@@ -244,7 +255,18 @@ class KanbanColumn(QWidget):
             self.text_color = new_color
             # Update database
             if self.db_manager:
-                self.db_manager.update_column_color(self.name, "TextColor", new_color)
+                result = self.db_manager.update_column_color(
+                    self.name, "TextColor", new_color
+                )
+                if result.success:
+                    self.db_manager.log.info(
+                        f"Column '{self.name}' text color changed to {new_color}"
+                    )
+                else:
+                    self.db_manager.log.error(
+                        f"""Failed to update text color for column
+                        '{self.name}': {result.message}"""
+                    )
 
     # ------------------------------------------------------------------------------------------
 

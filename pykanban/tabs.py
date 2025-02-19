@@ -78,7 +78,24 @@ class KanbanTabManager(QTabWidget):
         column_color: str = "#b8daff",
         text_color: str = "#000000",
     ):
-        """Add new column to Kanban board"""
+        """Add new column to Kanban board
+
+        Creates a new KanbanColumn widget with specified properties and adds it to
+        the board layout. The column is initialized with the provided colors and
+        connected to the database manager for persistent color updates.
+
+        Args:
+            name: Column header text
+            number: Initial task count (defaults to 0)
+            column_color: Background color for column header in hex format
+            (defaults to light blue) text_color: Text color for column header in
+            hex format (defaults to black)
+
+        Note:
+            The db_manager property must be set before calling this method for color
+            persistence to work. The database manager is passed to each KanbanColumn
+            to enable direct updates of color changes to the database.
+        """
         column = KanbanColumn(
             name=name,
             number=number,
@@ -91,12 +108,26 @@ class KanbanTabManager(QTabWidget):
         if self.log:
             self.log.info(f"Added Kanban column: {name} with color {column_color}")
 
+    # ------------------------------------------------------------------------------------------
+
     @property
     def db_manager(self):
+        """Get the current database manager instance
+
+        Returns:
+            The database manager object used for column operations
+        """
         return self._db_manager
+
+    # ------------------------------------------------------------------------------------------
 
     @db_manager.setter
     def db_manager(self, manager):
+        """Set the database manager instance
+
+        Args:
+            manager: KanbanDatabaseManager instance for column operations
+        """
         self._db_manager = manager
 
     # ==========================================================================================
