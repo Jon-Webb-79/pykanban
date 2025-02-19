@@ -77,9 +77,29 @@ class FileMenu:
 
     def close_db(self):
         """
-        Method that encodes the functionality of the Close attribute
+        Method that closes the current database and clears all tabs
         """
-        print("Closed databases")
+        if not self.controller.kanban_db:
+            self.log.info("No database is currently open")
+            return
+
+        # Call the controller's close_database method
+        result = self.controller.close_database()
+
+        if result.success:
+            # Clear all columns from the Kanban board
+            self._clear_kanban_board()
+            self.log.info("Database closed and Kanban board cleared successfully")
+        else:
+            self.log.error(f"Failed to close database: {result.message}")
+            # Try to clear the board anyway
+            self._clear_kanban_board()
+
+    # def close_db(self):
+    #     """
+    #     Method that encodes the functionality of the Close attribute
+    #     """
+    #     print("Closed databases")
 
     # ------------------------------------------------------------------------------------------
 
@@ -177,6 +197,34 @@ class FileMenu:
         self.menu.addAction(self.close_action)
         self.menu.addSeparator()  # Add visual separatio
         self.menu.addAction(self.delete_action)
+
+    # ------------------------------------------------------------------------------------------
+
+    def _clear_kanban_board(self):
+        """
+        Helper method to clear all columns from the Kanban board
+        """
+        try:
+            # Get the column layout from the tabs
+            column_layout = self.controller.tabs.column_layout
+
+            # Remove all widgets from the layout
+            while column_layout.count():
+                # Get the widget at index 0
+                item = column_layout.takeAt(0)
+                if item is not None and item.widget():
+                    # Hide and delete the widget
+                    widget = item.widget()
+                    widget.hide()
+                    widget.deleteLater()
+
+            # Force a layout update
+            self.controller.tabs.column_layout.update()
+
+            self.log.info("Successfully cleared Kanban board")
+
+        except Exception as e:
+            self.log.error(f"Error clearing Kanban board: {str(e)}")
 
 
 # ==========================================================================================

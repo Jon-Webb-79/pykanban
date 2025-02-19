@@ -224,6 +224,49 @@ class KanbanControllerManager(KanbanViewManager):
                 for name, number, column_color, text_color in result.data:
                     self.tabs.add_column(name, number, column_color, text_color)
 
+    # ------------------------------------------------------------------------------------------
+
+    def close_database(self) -> QueryResult:
+        """Close the current database and clean up resources
+
+        Returns:
+            QueryResult indicating success/failure of the operation
+        """
+        if not self.kanban_db:
+            return QueryResult(False, None, "No database is currently open")
+
+        try:
+            db_path = self.kanban_db.db_path  # Store path for logging
+
+            # Ensure connection is open before trying to close
+            open_result = self.kanban_db.db_manager.open_db()
+            if not open_result.success:
+                self.log.error(
+                    f"Could not open database for closing: {open_result.message}"
+                )
+                return open_result
+
+            # Close the database connection
+            result = self.kanban_db.db_manager.close_db()
+            if not result.success:
+                self.log.error(f"Failed to close database: {result.message}")
+                return result
+
+            # Remove the database from Qt's connection pool
+            self.kanban_db.db_manager.remove_db()
+
+            # Clear the database references
+            self.kanban_db = None
+            self.tabs.db_manager = None
+
+            self.log.info(f"Database {db_path} successfully closed")
+            return QueryResult(True, None, "Database closed successfully")
+
+        except Exception as e:
+            error_msg = f"Unexpected error while closing database: {str(e)}"
+            self.log.error(error_msg)
+            return QueryResult(False, None, error_msg)
+
 
 # ==========================================================================================
 # ==========================================================================================
