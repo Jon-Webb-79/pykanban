@@ -450,4 +450,91 @@ class OpenDatabaseDialog(QDialog):
 
 # ==========================================================================================
 # ==========================================================================================
+
+
+class NewColumnDialog(QDialog):
+    """Dialog for creating a new Kanban column"""
+
+    def __init__(self, log: logging.Logger, parent=None):
+        """Initialize dialog
+
+        Args:
+            log: Logger instance
+            parent: Parent widget
+        """
+        super().__init__(parent)
+        self.log = log
+        self.column_name = ""
+        self._setup_ui()
+        self.log.info("Initialized NewColumnDialog")
+
+    def get_column_name(self) -> str:
+        """Return the entered column name
+
+        Returns:
+            str: The column name if valid, empty string otherwise
+        """
+        return self.column_name
+
+    def _setup_ui(self):
+        """Initialize the dialog's user interface"""
+        self.setWindowTitle("Create New Column")
+        self.setModal(True)
+
+        # Create layouts
+        main_layout = QVBoxLayout(self)
+        name_layout = QHBoxLayout()
+        button_layout = QHBoxLayout()
+
+        # Create widgets for name input
+        name_label = QLabel("Column Name:")
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("Enter column name")
+
+        # Create accept/cancel buttons
+        self.create_button = QPushButton("Create")
+        self.create_button.clicked.connect(self._validate_and_accept)
+        self.create_button.setEnabled(False)  # Disabled until valid input
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+
+        # Arrange name input widgets
+        name_layout.addWidget(name_label)
+        name_layout.addWidget(self.name_edit)
+
+        # Arrange buttons
+        button_layout.addWidget(self.create_button)
+        button_layout.addWidget(cancel_button)
+
+        # Add all layouts to main layout
+        main_layout.addLayout(name_layout)
+        main_layout.addLayout(button_layout)
+
+        # Connect signals
+        self.name_edit.textChanged.connect(self._check_input_validity)
+
+        self.log.debug("Completed UI setup for NewColumnDialog")
+
+    def _check_input_validity(self):
+        """Enable/disable create button based on input validity"""
+        name = self.name_edit.text().strip()
+        self.create_button.setEnabled(bool(name))
+
+    def _validate_and_accept(self):
+        """Validate input and accept dialog if valid"""
+        name = self.name_edit.text().strip()
+
+        if not name:
+            self.log.warning("Column creation failed: Empty name")
+            QMessageBox.warning(self, "Invalid Input", "Please provide a column name.")
+            return
+
+        self.column_name = name
+        self.log.info(f"Column name validated: {name}")
+        self.accept()
+
+
+# ==========================================================================================
+# ==========================================================================================
 # eof

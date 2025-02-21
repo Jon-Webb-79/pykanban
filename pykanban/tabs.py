@@ -130,6 +130,26 @@ class KanbanTabManager(QTabWidget):
         """
         self._db_manager = manager
 
+    # ------------------------------------------------------------------------------------------
+
+    def clear_columns(self):
+        """Remove all columns from the Kanban board"""
+        # Clear all widgets from the column layout
+        while self.column_layout.count():
+            # Get the widget at index 0
+            item = self.column_layout.takeAt(0)
+            if item is not None and item.widget():
+                # Hide and delete the widget
+                widget = item.widget()
+                widget.hide()
+                widget.deleteLater()
+
+        # Force a layout update
+        self.column_layout.update()
+
+        if self.log:
+            self.log.debug("Cleared all columns from Kanban board")
+
     # ==========================================================================================
 
     def _setup_kanban_board(self):

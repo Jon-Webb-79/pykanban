@@ -1011,6 +1011,110 @@ class KanbanDatabaseManager:
                     False, None, f"Failed to update column color: {str(e)}"
                 )
 
+    # ------------------------------------------------------------------------------------------
+
+    def get_max_order(self) -> QueryResult:
+        """Get the maximum Order value from active columns
+
+        Returns:
+            QueryResult with the maximum order value as data
+        """
+        query = """
+        SELECT MAX("Order") as max_order
+        FROM Columns
+        WHERE deletion_date IS NULL;
+        """
+
+        with self.db_manager.connection() as db:
+            try:
+                result = db.execute_query(query)
+                if not result.success:
+                    return result
+
+                query_result = result.data
+                query_result.next()
+                max_order = query_result.value("max_order")
+
+                if not max_order:  # No columns exist
+                    max_order = 0
+
+                self.log.debug(f"Current maximum order value: {max_order}")
+                return QueryResult(
+                    True, max_order, "Maximum order retrieved successfully"
+                )
+
+            except Exception as e:
+                error_msg = f"Failed to get maximum order: {str(e)}"
+                self.log.error(error_msg)
+                return QueryResult(False, None, error_msg)
+
+    # ------------------------------------------------------------------------------------------
+
+    def get_order_for_new_column(self) -> QueryResult:
+        """Get the appropriate order value for a new column
+
+        Places new columns before the 'Complete' column, which should always be last.
+        'Ready to Start' should always be first (order=1).
+
+        Returns:
+            QueryResult with the new order value as data
+        """
+        with self.db_manager.connection() as db:
+            try:
+                # Begin transaction
+                begin_result = db.begin_transaction()
+                if not begin_result.success:
+                    return begin_result
+
+                # First get the Complete column's current order
+                find_query = """
+                SELECT "Order"
+                FROM Columns
+                WHERE Name = 'Complete' AND deletion_date IS NULL;
+                """
+
+                result = db.execute_query(find_query)
+                if not result.success:
+                    db.rollback_transaction()
+                    return result
+
+                query_result = result.data
+                if not query_result.next():
+                    db.rollback_transaction()
+                    self.log.error("Could not find 'Complete' column")
+                    return QueryResult(False, None, "Complete column not found")
+
+                complete_order = query_result.value("Order")
+
+                # Update Complete column's order
+                update_query = """
+                UPDATE Columns
+                SET "Order" = "Order" + 1
+                WHERE Name = 'Complete';
+                """
+
+                update_result = db.execute_query(update_query)
+                if not update_result.success:
+                    db.rollback_transaction()
+                    return update_result
+
+                # Commit the changes
+                commit_result = db.commit_transaction()
+                if not commit_result.success:
+                    db.rollback_transaction()
+                    return commit_result
+
+                # Return the order value that the new column should use
+                return QueryResult(
+                    True, complete_order, "Order value retrieved successfully"
+                )
+
+            except Exception as e:
+                db.rollback_transaction()
+                error_msg = f"Failed to get order for new column: {str(e)}"
+                self.log.error(error_msg)
+                return QueryResult(False, None, error_msg)
+
 
 # ==========================================================================================
 # ==========================================================================================

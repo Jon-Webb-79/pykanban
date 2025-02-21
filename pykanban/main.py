@@ -219,10 +219,15 @@ class KanbanControllerManager(KanbanViewManager):
     def load_kanban_board(self):
         """Load and display the Kanban board columns"""
         if self.kanban_db:
+            # First clear existing columns
+            self.tabs.clear_columns()
+
+            # Then load columns from database
             result = self.kanban_db.load_columns()
             if result.success:
                 for name, number, column_color, text_color in result.data:
                     self.tabs.add_column(name, number, column_color, text_color)
+                self.log.info("Successfully reloaded Kanban board columns")
 
     # ------------------------------------------------------------------------------------------
 

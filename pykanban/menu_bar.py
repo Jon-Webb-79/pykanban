@@ -5,7 +5,12 @@ from PyQt6.QtGui import QAction, QFont
 from PyQt6.QtWidgets import QDialog, QMenu, QMenuBar, QMessageBox
 
 from pykanban.database import KanbanDatabaseManager
-from pykanban.dialogs import DeleteDatabaseDialog, NewDatabaseDialog, OpenDatabaseDialog
+from pykanban.dialogs import (
+    DeleteDatabaseDialog,
+    NewColumnDialog,
+    NewDatabaseDialog,
+    OpenDatabaseDialog,
+)
 
 # ==========================================================================================
 # ==========================================================================================
@@ -270,14 +275,19 @@ class FileMenu:
 
 class ColumnMenu:
     """
-    Class that builds all functionality necessary to impliment the Column attributes
+    Class that builds all functionality necessary to implement the Column attributes
     of the menu bar
 
-    :param font: A font object to set text attributes
+    Args:
+        controller: The application's controller instance
+        font: A font object to set text attributes
+        log: Logger instance for tracking operations
     """
 
-    def __init__(self, font: QFont):
+    def __init__(self, controller, font: QFont, log: logging.Logger):
+        self.controller = controller
         self.font = font
+        self.log = log
         self.menu = QMenu("Columns")
         self.menu.menuAction().setStatusTip("Kanban Column Options")
 
@@ -288,10 +298,51 @@ class ColumnMenu:
     # ------------------------------------------------------------------------------------------
 
     def create_col(self):
-        """
-        Method that encodes the functionality of the Create Column attribute
-        """
-        print("Created a new Kanban Column")
+        """Method that creates a new Kanban column"""
+        # Check if a database is open
+        if not self.controller.kanban_db:
+            QMessageBox.warning(
+                self.menu,
+                "No Database Open",
+                "Please open a database before creating columns.",
+            )
+            return
+
+        dialog = NewColumnDialog(self.log, self.menu)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            column_name = dialog.get_column_name()
+
+            try:
+                # Get the order value (before Complete)
+                result = self.controller.kanban_db.get_order_for_new_column()
+                if not result.success:
+                    raise Exception(f"Failed to get column order: {result.message}")
+
+                new_order = result.data
+
+                # Add the column
+                result = self.controller.kanban_db.add_column(
+                    name=column_name, order=new_order
+                )
+
+                if result.success:
+                    # Refresh the Kanban board
+                    self.controller.load_kanban_board()
+                    QMessageBox.information(
+                        self.menu,
+                        "Success",
+                        f"Column '{column_name}' created successfully.",
+                    )
+                else:
+                    QMessageBox.critical(
+                        self.menu, "Error", f"Failed to create column: {result.message}"
+                    )
+
+            except Exception as e:
+                self.log.error(f"Error creating column: {str(e)}")
+                QMessageBox.critical(
+                    self.menu, "Error", f"Failed to create column: {str(e)}"
+                )
 
     # ------------------------------------------------------------------------------------------
 
@@ -467,7 +518,7 @@ class MenuBar(QMenuBar):
         font = QFont("Helvetica", 14)
         self.setFont(font)  # Set font for top-level menu
         self.file_menu = FileMenu(controller, font, log)
-        self.col_menu = ColumnMenu(font)
+        self.col_menu = ColumnMenu(controller, font, log)
         self.proj_menu = ProjectMenu(font)
 
         self.addMenu(self.file_menu.menu)
