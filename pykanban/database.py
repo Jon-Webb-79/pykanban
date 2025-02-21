@@ -678,15 +678,25 @@ class KanbanDatabaseManager:
 
     def initialize_database(self) -> QueryResult:
         """Create initial schema for a new Kanban database with default columns"""
-        create_columns_table = """
-            CREATE TABLE Columns (
-            Name TEXT PRIMARY KEY,
+        create_table = """
+        CREATE TABLE Columns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name TEXT NOT NULL,
             "Order" INTEGER NOT NULL UNIQUE,
             Number INTEGER NOT NULL DEFAULT 0,
             ColumnColor TEXT NOT NULL DEFAULT '#b8daff',
-            TextColor TEXT NOT NULL DEFAULT '#000000'
-        );
+            TextColor TEXT NOT NULL DEFAULT '#000000',
+            creation_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deletion_date DATETIME
+        )
         """
+
+        create_index = """
+        CREATE UNIQUE INDEX idx_active_column_names
+        ON Columns(Name)
+        WHERE deletion_date IS NULL
+        """
+
         with self.db_manager.connection() as db:
             try:
                 # Begin transaction for schema creation
@@ -696,13 +706,20 @@ class KanbanDatabaseManager:
                     return begin_result
 
                 # Create the Columns table
-                query_result = db.execute_query(create_columns_table)
-                if not query_result.success:
+                table_result = db.execute_query(create_table)
+                if not table_result.success:
                     self.log.error(
-                        f"Failed to create Columns table: {query_result.message}"
+                        f"Failed to create Columns table: {table_result.message}"
                     )
                     db.rollback_transaction()
-                    return query_result
+                    return table_result
+
+                # Create the unique index
+                index_result = db.execute_query(create_index)
+                if not index_result.success:
+                    self.log.error(f"Failed to create index: {index_result.message}")
+                    db.rollback_transaction()
+                    return index_result
 
                 # Add default columns
                 default_columns = [
@@ -715,14 +732,14 @@ class KanbanDatabaseManager:
                 INSERT INTO Columns (Name, "Order", Number, ColumnColor, TextColor)
                 VALUES (?, ?, 0, ?, ?);
                 """
+
                 for name, order, column_color, text_color in default_columns:
                     column_result = db.execute_query(
                         insert_query, (name, order, column_color, text_color)
                     )
                     if not column_result.success:
                         self.log.error(
-                            f"""Failed to create default col
-                            {name}: {column_result.message}"""
+                            f"Failed to create col {name}: {column_result.message}"
                         )
                         db.rollback_transaction()
                         return column_result
@@ -770,6 +787,9 @@ class KanbanDatabaseManager:
         Returns:
             QueryResult indicating success/failure
         """
+        if not name:
+            return QueryResult(False, None, "Column name cannot be empty")
+
         insert_query = """
         INSERT INTO Columns (Name, "Order", Number, ColumnColor, TextColor)
         VALUES (?, ?, 0, ?, ?);
@@ -793,6 +813,14 @@ class KanbanDatabaseManager:
                     )
                     db.rollback_transaction()
                     return query_result
+
+                # Get the ID of the newly inserted column
+                id_query = "SELECT last_insert_rowid() as id;"
+                id_result = db.execute_query(id_query)
+                if id_result.success:
+                    id_result.data.next()
+                    column_id = id_result.data.value("id")
+                    self.log.info(f"Created column {name} with ID {column_id}")
 
                 # Commit the changes
                 commit_result = db.commit_transaction()
@@ -885,15 +913,16 @@ class KanbanDatabaseManager:
     # ------------------------------------------------------------------------------------------
 
     def load_columns(self) -> QueryResult:
-        """Load all columns from the database
+        """Load all active columns from the database
 
         Returns:
             QueryResult with list of (name, number, column_color, text_color) tuples
-            ordered by column order
+            ordered by column order, only including non-deleted columns
         """
         query = """
         SELECT Name, Number, ColumnColor, TextColor
         FROM Columns
+        WHERE deletion_date IS NULL
         ORDER BY "Order";
         """
 
@@ -912,10 +941,15 @@ class KanbanDatabaseManager:
                     text_color = query_result.value("TextColor")
                     columns.append((name, number, column_color, text_color))
 
+                self.log.info(f"Successfully loaded {len(columns)} active columns")
                 return QueryResult(True, columns, "Columns loaded successfully")
 
             except Exception as e:
-                return QueryResult(False, None, f"Failed to load columns: {str(e)}")
+                error_msg = f"Failed to load columns: {str(e)}"
+                self.log.error(error_msg)
+                return QueryResult(False, None, error_msg)
+
+    # ------------------------------------------------------------------------------------------
 
     def update_column_color(
         self, column_name: str, color_type: str, color: str
