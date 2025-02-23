@@ -1,8 +1,17 @@
 import logging
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QScrollArea, QTabWidget, QWidget
+from PyQt6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QMenu,
+    QMessageBox,
+    QScrollArea,
+    QTabWidget,
+    QWidget,
+)
 
+from pykanban.dialogs import NewColumnDialog
 from pykanban.widgets import KanbanColumn
 
 # ==========================================================================================
@@ -154,7 +163,6 @@ class KanbanTabManager(QTabWidget):
 
     def _setup_kanban_board(self):
         """Configure layout for Kanban board tab
-
         Creates horizontal scrollable area to contain Kanban columns
         """
         self.kanban_layout = QHBoxLayout(self.kanban_tab)
@@ -173,8 +181,82 @@ class KanbanTabManager(QTabWidget):
         self.column_layout.setSpacing(10)
         self.column_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
+        # Enable context menu
+        self.column_container.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.column_container.customContextMenuRequested.connect(self._show_context_menu)
+
         self.scroll.setWidget(self.column_container)
         self.kanban_layout.addWidget(self.scroll)
+
+    # ------------------------------------------------------------------------------------------
+
+    def _show_context_menu(self, position):
+        """Show context menu for column container
+
+        Args:
+            position: Mouse position where menu should appear
+        """
+        if not self.db_manager:
+            # No database open, don't show menu
+            return
+
+        context_menu = QMenu(self)
+        create_action = context_menu.addAction("Create New Column")
+
+        # Show the menu and get selected action
+        action = context_menu.exec(self.column_container.mapToGlobal(position))
+
+        if action == create_action:
+            # Create new column using the existing dialog
+            dialog = NewColumnDialog(self.log, self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                column_name = dialog.get_column_name()
+
+                try:
+                    # Get the order value (before Complete)
+                    result = self.db_manager.get_order_for_new_column()
+                    if not result.success:
+                        raise Exception(f"Failed to get column order: {result.message}")
+
+                    new_order = result.data
+
+                    # Add the column
+                    result = self.db_manager.add_column(name=column_name, order=new_order)
+
+                    if result.success:
+                        # Clear existing columns
+                        self.clear_columns()
+
+                        # Reload columns from database
+                        load_result = self.db_manager.load_columns()
+                        if load_result.success:
+                            for (
+                                name,
+                                number,
+                                column_color,
+                                text_color,
+                            ) in load_result.data:
+                                self.add_column(name, number, column_color, text_color)
+
+                            QMessageBox.information(
+                                self,
+                                "Success",
+                                f"Column '{column_name}' created successfully.",
+                            )
+                        else:
+                            raise Exception(
+                                f"Failed to reload columns: {load_result.message}"
+                            )
+                    else:
+                        QMessageBox.critical(
+                            self, "Error", f"Failed to create column: {result.message}"
+                        )
+
+                except Exception as e:
+                    self.log.error(f"Error creating column: {str(e)}")
+                    QMessageBox.critical(
+                        self, "Error", f"Failed to create column: {str(e)}"
+                    )
 
 
 # ==========================================================================================
