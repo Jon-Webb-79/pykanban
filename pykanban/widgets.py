@@ -6,8 +6,10 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMenu,
+    QMessageBox,
     QRadioButton,
     QSizePolicy,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -211,6 +213,13 @@ class KanbanColumn(QWidget):
         # Add the color submenu to main context menu
         context_menu.addMenu(color_menu)
 
+        # Add delete option only for non-fixed columns
+        if self.name not in ["Ready to Start", "Complete"]:
+            context_menu.addSeparator()  # Add visual separator
+            delete_action = context_menu.addAction("Delete Column")
+        else:
+            delete_action = None
+
         # Show the menu at the mouse position and get selected action
         action = context_menu.exec(self.mapToGlobal(position))
 
@@ -219,6 +228,85 @@ class KanbanColumn(QWidget):
             self._change_header_color()
         elif action == text_action:
             self._change_text_color()
+        elif action == delete_action:
+            self._delete_column()
+
+    # ------------------------------------------------------------------------------------------
+
+    def _delete_column(self):
+        """Delete this column if it's not a fixed column"""
+        if self.name in ["Ready to Start", "Complete"]:
+            return
+
+        # Confirm deletion with user
+        reply = QMessageBox.question(
+            self,
+            "Confirm Deletion",
+            f"Are you sure you want to delete the column '{self.name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            if self.db_manager:
+                # Attempt to delete the column
+                result = self.db_manager.soft_delete_column(self.name)
+                if result.success:
+                    # Find the parent KanbanTabManager
+                    parent = self.parent()
+                    while parent and not isinstance(parent, QTabWidget):
+                        parent = parent.parent()
+
+                    # Refresh the board if we found the tab manager
+                    if parent and hasattr(parent, "db_manager"):
+                        parent.clear_columns()
+                        load_result = self.db_manager.load_columns()
+                        if load_result.success:
+                            for (
+                                name,
+                                number,
+                                column_color,
+                                text_color,
+                            ) in load_result.data:
+                                parent.add_column(name, number, column_color, text_color)
+                        else:
+                            QMessageBox.critical(
+                                self,
+                                "Error",
+                                f"Failed to reload columns: {load_result.message}",
+                            )
+                else:
+                    QMessageBox.critical(
+                        self, "Error", f"Failed to delete column: {result.message}"
+                    )
+
+    # def _show_context_menu(self, position):
+    #     """Show the context menu for the column when right-clicked
+    #
+    #     Args:
+    #         position: Mouse position where menu should appear
+    #     """
+    #     # Create the main context menu
+    #     context_menu = QMenu(self)
+    #
+    #     # Create "Column Colors" submenu
+    #     color_menu = QMenu("Column Colors", self)
+    #
+    #     # Add color options to the submenu
+    #     header_action = color_menu.addAction("Header Color")
+    #     text_action = color_menu.addAction("Text Color")
+    #
+    #     # Add the color submenu to main context menu
+    #     context_menu.addMenu(color_menu)
+    #
+    #     # Show the menu at the mouse position and get selected action
+    #     action = context_menu.exec(self.mapToGlobal(position))
+    #
+    #     # Handle the selected action
+    #     if action == header_action:
+    #         self._change_header_color()
+    #     elif action == text_action:
+    #         self._change_text_color()
 
     # ------------------------------------------------------------------------------------------
 
