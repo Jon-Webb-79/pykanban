@@ -233,3 +233,75 @@ QScrollArea {
 QScrollArea > QWidget {
     background-color: #f5f5f5;
 }
+
+/* ============================= */
+/*    DELETE COLUMN DIALOG       */
+/* ============================= */
+QDialog[objectName="deleteColumnDialog"] {
+    min-width: 400px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QLabel {
+    color: #333333;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #bfbfbf;
+    border-radius: 6px;
+    padding: 6px;
+    min-width: 200px;
+    margin-bottom: 15px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox:hover {
+    border-color: #85b7e3;
+}
+
+/* Style the dropdown list */
+QDialog[objectName="deleteColumnDialog"] QComboBox QAbstractItemView {
+    background-color: #e0e0e0;  /* Mid-gray background */
+    color: #333333;
+    selection-background-color: #808080;  /* Darker gray for selected items */
+    selection-color: white;
+    border: 1px solid #bfbfbf;
+}
+
+/* Style items when hovered */
+QDialog[objectName="deleteColumnDialog"] QComboBox QAbstractItemView::item:hover {
+    background-color: #666666;  /* Dark gray for hover state */
+    color: white;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox::down-arrow {
+    image: url(:/icons/down_arrow.png);
+    width: 12px;
+    height: 12px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton {
+    min-width: 100px;
+    margin-top: 10px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"] {
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"]:hover {
+    background-color: #ff5252;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"]:pressed {
+    background-color: #ff3838;
+}

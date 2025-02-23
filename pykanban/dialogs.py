@@ -555,6 +555,7 @@ class DeleteColumnDialog(QDialog):
             parent: Parent widget
         """
         super().__init__(parent)
+        self.setObjectName("deleteColumnDialog")
         self.log = log
         self.selected_column = None  # Store selected column
 
@@ -574,6 +575,7 @@ class DeleteColumnDialog(QDialog):
         # Confirm and Cancel buttons
         button_layout = QVBoxLayout()
         delete_button = QPushButton("Delete")
+        delete_button.setObjectName("deleteButton")
         delete_button.clicked.connect(self._confirm_selection)
 
         cancel_button = QPushButton("Cancel")

@@ -186,3 +186,126 @@ QScrollArea {
 QScrollArea > QWidget {
     background-color: rgb(95, 95, 95);  /* Match tab background */
 }
+
+/* ============================= */
+/*          QMENU BAR            */
+/* ============================= */
+QMenuBar {
+    background-color: rgb(60, 60, 60);
+    border-bottom: 1px solid rgb(80, 80, 80);
+    padding: 2px;
+}
+
+QMenuBar::item {
+    color: rgb(220, 220, 220);
+    padding: 4px 10px;
+    background-color: transparent;
+}
+
+QMenuBar::item:selected {
+    background-color: rgb(80, 80, 80);
+    color: white;
+    border-radius: 4px;
+}
+
+/* ============================= */
+/*           QMENU               */
+/* ============================= */
+QMenu {
+    background-color: rgb(50, 50, 50);
+    border: 1px solid rgb(80, 80, 80);
+    padding: 4px;
+    border-radius: 6px;
+}
+
+QMenu::item {
+    color: rgb(220, 220, 220);
+    padding: 6px 20px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: rgb(80, 80, 80);
+    color: white;
+}
+
+/* ============================= */
+/*        INPUT FIELDS           */
+/* ============================= */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: rgb(50, 50, 50);
+    color: rgb(220, 220, 220);
+    border: 1px solid rgb(80, 80, 80);
+    border-radius: 6px;
+    padding: 6px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid rgb(100, 100, 100);
+    background-color: rgb(60, 60, 60);
+}
+
+/* ============================= */
+/*        QSTATUSBAR             */
+/* ============================= */
+QStatusBar {
+    color: rgb(0, 200, 200);  /* Darker cyan to match night theme */
+}
+
+/* ============================= */
+/*    DELETE COLUMN DIALOG       */
+/* ============================= */
+QDialog[objectName="deleteColumnDialog"] {
+    min-width: 400px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QLabel {
+    color: rgb(220, 220, 220);
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox {
+    background-color: rgb(50, 50, 50);
+    color: rgb(220, 220, 220);
+    border: 1px solid rgb(80, 80, 80);
+    border-radius: 6px;
+    padding: 6px;
+    min-width: 200px;
+    margin-bottom: 15px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox:hover {
+    border-color: rgb(100, 100, 100);
+    background-color: rgb(60, 60, 60);
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QComboBox::down-arrow {
+    image: url(:/icons/down_arrow_light.png);
+    width: 12px;
+    height: 12px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton {
+    min-width: 100px;
+    margin-top: 10px;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"] {
+    background-color: #d32f2f;
+    color: white;
+    border: none;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"]:hover {
+    background-color: #b71c1c;
+}
+
+QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"]:pressed {
+    background-color: #961717;
+}
