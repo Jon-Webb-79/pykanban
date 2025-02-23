@@ -1115,6 +1115,89 @@ class KanbanDatabaseManager:
                 self.log.error(error_msg)
                 return QueryResult(False, None, error_msg)
 
+    # ------------------------------------------------------------------------------------------
+
+    def soft_delete_column(self, column_name: str) -> QueryResult:
+        """Soft delete a column by setting its deletion_date
+
+        Also updates the order of remaining columns to maintain sequence.
+
+        Args:
+            column_name: Name of the column to delete
+
+        Returns:
+            QueryResult indicating success/failure
+        """
+        if column_name in ["Ready to Start", "Complete"]:
+            return QueryResult(False, None, "Cannot delete fixed columns")
+
+        with self.db_manager.connection() as db:
+            try:
+                # Begin transaction
+                begin_result = db.begin_transaction()
+                if not begin_result.success:
+                    return begin_result
+
+                # Get the current order of the column
+                order_query = """
+                SELECT "Order"
+                FROM Columns
+                WHERE Name = ? AND deletion_date IS NULL;
+                """
+
+                order_result = db.execute_query(order_query, (column_name,))
+                if not order_result.success:
+                    db.rollback_transaction()
+                    return order_result
+
+                result = order_result.data
+                if not result.next():
+                    db.rollback_transaction()
+                    return QueryResult(False, None, "Column not found")
+
+                current_order = result.value("Order")
+
+                # Set deletion_date for the column
+                delete_query = """
+                UPDATE Columns
+                SET deletion_date = CURRENT_TIMESTAMP
+                WHERE Name = ? AND deletion_date IS NULL;
+                """
+
+                delete_result = db.execute_query(delete_query, (column_name,))
+                if not delete_result.success:
+                    db.rollback_transaction()
+                    return delete_result
+
+                # Update order for remaining columns
+                reorder_query = """
+                UPDATE Columns
+                SET "Order" = "Order" - 1
+                WHERE "Order" > ?
+                AND deletion_date IS NULL
+                AND Name != 'Complete';
+                """
+
+                reorder_result = db.execute_query(reorder_query, (current_order,))
+                if not reorder_result.success:
+                    db.rollback_transaction()
+                    return reorder_result
+
+                # Commit the transaction
+                commit_result = db.commit_transaction()
+                if not commit_result.success:
+                    db.rollback_transaction()
+                    return commit_result
+
+                self.log.info(f"Successfully soft deleted column: {column_name}")
+                return QueryResult(True, None, "Column deleted successfully")
+
+            except Exception as e:
+                db.rollback_transaction()
+                error_msg = f"Failed to delete column: {str(e)}"
+                self.log.error(error_msg)
+                return QueryResult(False, None, error_msg)
+
 
 # ==========================================================================================
 # ==========================================================================================

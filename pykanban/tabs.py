@@ -138,6 +138,7 @@ class KanbanTabManager(QTabWidget):
             manager: KanbanDatabaseManager instance for column operations
         """
         self._db_manager = manager
+        print(f"Database manager updated: {manager is not None}")
 
     # ------------------------------------------------------------------------------------------
 

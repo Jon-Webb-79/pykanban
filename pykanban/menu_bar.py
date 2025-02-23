@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QDialog, QMenu, QMenuBar, QMessageBox
 
 from pykanban.database import KanbanDatabaseManager
 from pykanban.dialogs import (
+    DeleteColumnDialog,
     DeleteDatabaseDialog,
     NewColumnDialog,
     NewDatabaseDialog,
@@ -87,12 +88,6 @@ class FileMenu:
                 self.controller.kanban_db = None
         else:
             self.log.info("User cancelled database opening")
-
-    # def open_db(self):
-    #     """
-    #     Method that encodes the functionality of the Open attribute
-    #     """
-    #     print("Opened Database")
 
     # ------------------------------------------------------------------------------------------
 
@@ -347,10 +342,54 @@ class ColumnMenu:
     # ------------------------------------------------------------------------------------------
 
     def delete_col(self):
-        """
-        Method that encodes the functionality of the Delete Column attribute
-        """
-        print("Deleted a Kanban Column")
+        """Allow the user to delete a Kanban column by selecting from a list"""
+        # Check if a database is open
+        if not self.controller.kanban_db:
+            QMessageBox.warning(
+                self.menu,
+                "No Database Open",
+                "Please open a database before deleting columns.",
+            )
+            return
+
+        # Fetch all columns except "Ready to Start" and "Complete"
+        result = self.controller.kanban_db.load_columns()
+        if not result.success:
+            QMessageBox.critical(
+                self.menu, "Error", f"Failed to retrieve columns: {result.message}"
+            )
+            return
+
+        deletable_columns = [
+            name
+            for name, number, column_color, text_color in result.data
+            if name not in ["Ready to Start", "Complete"]
+        ]
+
+        if not deletable_columns:
+            QMessageBox.information(
+                self.menu, "No Columns", "No columns available for deletion."
+            )
+            return
+
+        # Open the column deletion dialog
+        dialog = DeleteColumnDialog(self.log, deletable_columns, self.menu)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected_column = dialog.get_selected_column()
+            if selected_column:
+                result = self.controller.kanban_db.soft_delete_column(selected_column)
+                if result.success:
+                    # Refresh the Kanban board
+                    self.controller.load_kanban_board()
+                    QMessageBox.information(
+                        self.menu,
+                        "Success",
+                        f"Column '{selected_column}' deleted successfully.",
+                    )
+                else:
+                    QMessageBox.critical(
+                        self.menu, "Error", f"Failed to delete column: {result.message}"
+                    )
 
     # ------------------------------------------------------------------------------------------
 

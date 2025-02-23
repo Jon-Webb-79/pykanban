@@ -2,6 +2,7 @@ import logging
 import os
 
 from PyQt6.QtWidgets import (
+    QComboBox,
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -533,6 +534,72 @@ class NewColumnDialog(QDialog):
         self.column_name = name
         self.log.info(f"Column name validated: {name}")
         self.accept()
+
+
+# ==========================================================================================
+# ==========================================================================================
+
+
+class DeleteColumnDialog(QDialog):
+    """
+    Dialog that allows users to select a Kanban column to delete.
+    """
+
+    def __init__(self, log, columns, parent=None):
+        """
+        Initialize the delete column dialog.
+
+        Args:
+            log: Logger instance
+            columns: List of column names that can be deleted
+            parent: Parent widget
+        """
+        super().__init__(parent)
+        self.log = log
+        self.selected_column = None  # Store selected column
+
+        self.setWindowTitle("Delete Column")
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+
+        # Instruction Label
+        layout.addWidget(QLabel("Select a column to delete:"))
+
+        # Dropdown menu for selecting a column
+        self.column_selector = QComboBox()
+        self.column_selector.addItems(columns)
+        layout.addWidget(self.column_selector)
+
+        # Confirm and Cancel buttons
+        button_layout = QVBoxLayout()
+        delete_button = QPushButton("Delete")
+        delete_button.clicked.connect(self._confirm_selection)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+
+        button_layout.addWidget(delete_button)
+        button_layout.addWidget(cancel_button)
+
+        layout.addLayout(button_layout)
+
+    def _confirm_selection(self):
+        """
+        Save the selected column and close the dialog.
+        """
+        self.selected_column = self.column_selector.currentText()
+        self.log.info(f"User selected column '{self.selected_column}' for deletion.")
+        self.accept()
+
+    def get_selected_column(self):
+        """
+        Return the selected column name.
+
+        Returns:
+            str | None: Selected column name or None if canceled.
+        """
+        return self.selected_column
 
 
 # ==========================================================================================
