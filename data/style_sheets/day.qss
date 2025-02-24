@@ -305,3 +305,16 @@ QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"]:
 QDialog[objectName="deleteColumnDialog"] QPushButton[objectName="deleteButton"]:pressed {
     background-color: #ff3838;
 }
+
+/* Additional styling for draggable columns */
+QWidget[class="draggableColumn"] {
+    background-color: #f0f0f0;  /* Light gray background to stand out from white */
+    border: 3px solid #999999;  /* Darker border for better visibility */
+    border-radius: 12px;
+}
+
+QWidget[class="draggableColumnContainer"] {
+    background-color: #f8f8f8;  /* Slightly lighter than column */
+    border: 1px solid #cccccc;
+    border-radius: 10px;
+}

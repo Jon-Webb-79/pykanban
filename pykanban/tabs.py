@@ -27,6 +27,97 @@ from pykanban.widgets import KanbanColumn
 
 
 class KanbanTabManager(QTabWidget):
+
+    class KanbanColumnContainer(QWidget):
+        """Container widget for Kanban columns that supports drag and drop"""
+
+        def __init__(self, parent=None, log=None):
+            """Initialize the column container
+
+            Args:
+                parent: Parent widget
+                log: Logger instance
+            """
+            super().__init__(parent)
+            self.log = log
+            self.setObjectName("columnContainer")
+
+            # Enable dropping
+            self.setAcceptDrops(True)
+
+            # Create layout for columns
+            self.column_layout = QHBoxLayout(self)
+            self.column_layout.setSpacing(10)
+            self.column_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+            # Setup context menu
+            self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        def dragEnterEvent(self, event):
+            """Handle drag enter events
+
+            Accept the drag if it's coming from a Kanban column
+
+            Args:
+                event: Drag enter event
+            """
+            # Accept the drag if we're dragging a Kanban column
+            if event.mimeData().hasText():
+                # Get the column name from the mime data
+                column_name = event.mimeData().text()
+
+                # Only accept if it's not a fixed column
+                if column_name not in ["Ready to Start", "Complete"]:
+                    event.accept()
+                    if self.log:
+                        self.log.debug(f"Accepted drag enter for column: {column_name}")
+                else:
+                    event.ignore()
+                    if self.log:
+                        self.log.debug(f"Rejected drag for fixed column: {column_name}")
+            else:
+                event.ignore()
+
+        def dragMoveEvent(self, event):
+            """Handle drag move events
+
+            Show visual feedback about where the column would be placed
+
+            Args:
+                event: Drag move event
+            """
+            # Accept the drag if we're dragging a Kanban column
+            if event.mimeData().hasText():
+                # Get the column name
+                column_name = event.mimeData().text()
+
+                # Only handle non-fixed columns
+                if column_name not in ["Ready to Start", "Complete"]:
+                    event.accept()
+
+                    # Here you could add visual indicators like drawing a line or
+                    # highlighting where the column would be placed
+                    # For now, we'll just accept the drag
+                else:
+                    event.ignore()
+            else:
+                event.ignore()
+
+        def dropEvent(self, event):
+            """Handle drop events
+
+            For now, we always ignore the drop since we're not persisting changes
+
+            Args:
+                event: Drop event
+            """
+            # Always ignore drops for now since we don't want to persist changes
+            # This effectively cancels the drag and drop operation
+            event.ignore()
+
+            if self.log:
+                self.log.debug("Drop ignored - column will reset to original position")
+
     """Manages multiple tabs including Kanban board display
 
     Creates and manages tabs for task queue, Kanban board, statistics,
@@ -110,7 +201,7 @@ class KanbanTabManager(QTabWidget):
             number=number,
             column_color=column_color,
             text_color=text_color,
-            parent=self,
+            parent=self.column_container,  # Now using column_container
             db_manager=self.db_manager,
         )
         self.column_layout.addWidget(column)
@@ -176,15 +267,12 @@ class KanbanTabManager(QTabWidget):
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        self.column_container = QWidget()
-        self.column_container.setObjectName("columnContainer")
-        self.column_layout = QHBoxLayout(self.column_container)
-        self.column_layout.setSpacing(10)
-        self.column_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-        # Enable context menu
-        self.column_container.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        # Use our new KanbanColumnContainer instead of a basic QWidget
+        self.column_container = self.KanbanColumnContainer(log=self.log)
         self.column_container.customContextMenuRequested.connect(self._show_context_menu)
+
+        # Get reference to the column layout from our container
+        self.column_layout = self.column_container.column_layout
 
         self.scroll.setWidget(self.column_container)
         self.kanban_layout.addWidget(self.scroll)

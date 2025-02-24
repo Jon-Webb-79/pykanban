@@ -1,6 +1,7 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import QMimeData, Qt
+from PyQt6.QtGui import QColor, QDrag, QPixmap
 from PyQt6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QColorDialog,
     QHBoxLayout,
@@ -139,11 +140,21 @@ class KanbanColumn(QWidget):
         self._text_color = text_color
         self.db_manager = db_manager
 
+        # Flag to indicate if the column is currently being dragged
+        self.dragging = False
+        # Store the initial position for when drag is canceled
+        self.initial_position = None
+        # Original column index for restoring position if drag is not committed
+        self.original_index = None
+
         # Enable right-click menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
 
         self._setup_ui()
+
+        # Enable mouse tracking for drag and drop
+        self.setMouseTracking(True)
 
     # ------------------------------------------------------------------------------------------
 
@@ -191,6 +202,105 @@ class KanbanColumn(QWidget):
         """Update the number of tasks shown in column header"""
         self.number = number
         self.header.setText(f"{self.name} / {self.number}")
+
+    # ------------------------------------------------------------------------------------------
+
+    def mousePressEvent(self, event):
+        """Handle mouse press events for drag and drop
+
+        Args:
+            event: Mouse event object
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Only allow dragging of non-fixed columns
+            if self.name in ["Ready to Start", "Complete"]:
+                # Ignore drag for fixed columns
+                event.ignore()
+                return
+
+            # Store initial position
+            self.initial_position = self.pos()
+
+            # Start tracking for potential drag operation
+            self.dragging = True
+            self.drag_start_position = event.pos()
+
+            # Find index of this column in its parent layout
+            parent_layout = self.parent().layout()
+            for i in range(parent_layout.count()):
+                if parent_layout.itemAt(i).widget() == self:
+                    self.original_index = i
+                    break
+
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    # ------------------------------------------------------------------------------------------
+
+    def mouseMoveEvent(self, event):
+        """Handle mouse move events for drag and drop
+
+        Args:
+            event: Mouse event object
+        """
+        if not self.dragging:
+            super().mouseMoveEvent(event)
+            return
+
+        # Check if we've moved far enough to start a drag
+        if (
+            event.pos() - self.drag_start_position
+        ).manhattanLength() < QApplication.startDragDistance():
+            event.accept()
+            return
+
+        # Start drag operation
+        drag = QDrag(self)
+        mime_data = QMimeData()
+        mime_data.setText(self.name)
+        drag.setMimeData(mime_data)
+
+        # Create a pixmap of this widget for the drag image
+        pixmap = QPixmap(self.size())
+        self.render(pixmap)
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(event.pos())
+
+        # Make us semi-transparent during the drag
+        self.setWindowOpacity(0.5)
+
+        # Execute drag and handle result (we only care about the fact that
+        # the drag finished, since we're not actually moving the column)
+        drag.exec(Qt.DropAction.MoveAction)
+
+        # Reset opacity and dragging state
+        self.setWindowOpacity(1.0)
+        self.dragging = False
+
+        # Reset to original position since we're not persisting changes
+        if self.initial_position:
+            self.move(self.initial_position)
+
+        event.accept()
+
+    # ------------------------------------------------------------------------------------------
+
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release events
+
+        Args:
+            event: Mouse event object
+        """
+        if event.button() == Qt.MouseButton.LeftButton and self.dragging:
+            # Reset dragging state
+            self.dragging = False
+            # Reset to original position since we're not persisting changes
+            if self.initial_position:
+                self.move(self.initial_position)
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
 
     # ==========================================================================================
 
@@ -280,34 +390,6 @@ class KanbanColumn(QWidget):
                         self, "Error", f"Failed to delete column: {result.message}"
                     )
 
-    # def _show_context_menu(self, position):
-    #     """Show the context menu for the column when right-clicked
-    #
-    #     Args:
-    #         position: Mouse position where menu should appear
-    #     """
-    #     # Create the main context menu
-    #     context_menu = QMenu(self)
-    #
-    #     # Create "Column Colors" submenu
-    #     color_menu = QMenu("Column Colors", self)
-    #
-    #     # Add color options to the submenu
-    #     header_action = color_menu.addAction("Header Color")
-    #     text_action = color_menu.addAction("Text Color")
-    #
-    #     # Add the color submenu to main context menu
-    #     context_menu.addMenu(color_menu)
-    #
-    #     # Show the menu at the mouse position and get selected action
-    #     action = context_menu.exec(self.mapToGlobal(position))
-    #
-    #     # Handle the selected action
-    #     if action == header_action:
-    #         self._change_header_color()
-    #     elif action == text_action:
-    #         self._change_text_color()
-
     # ------------------------------------------------------------------------------------------
 
     def _change_header_color(self):
@@ -361,7 +443,7 @@ class KanbanColumn(QWidget):
     def _update_header_style(self):
         """Update the header's style sheet with current colors"""
         style = f"""
-            QLabel {{
+            QLabel#columnHeader {{
                 background-color: {self._column_color};
                 color: {self._text_color};
                 border: 1px solid #dcdcdc;
@@ -378,6 +460,10 @@ class KanbanColumn(QWidget):
     def _setup_ui(self):
         """Configure the column's UI layout and styling"""
         self.setObjectName("kanbanColumn")
+        self.setProperty(
+            "class", "draggableColumn"
+        )  # Add a class property for QSS selection
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(5)
@@ -393,6 +479,10 @@ class KanbanColumn(QWidget):
 
         self.task_container = QWidget()
         self.task_container.setObjectName("columnTaskContainer")
+        self.task_container.setProperty(
+            "class", "draggableColumnContainer"
+        )  # Add class property
+
         self.task_layout = QVBoxLayout(self.task_container)
         self.task_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.task_layout.setSpacing(5)
