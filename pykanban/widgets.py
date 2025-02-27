@@ -270,6 +270,10 @@ class KanbanColumn(QWidget):
         # Make us semi-transparent during the drag
         self.setWindowOpacity(0.5)
 
+        # Log the start of drag
+        if self.db_manager and self.db_manager.log:
+            self.db_manager.log.debug(f"Started dragging column: {self.name}")
+
         # Execute drag and handle result (we only care about the fact that
         # the drag finished, since we're not actually moving the column)
         drag.exec(Qt.DropAction.MoveAction)
@@ -277,6 +281,10 @@ class KanbanColumn(QWidget):
         # Reset opacity and dragging state
         self.setWindowOpacity(1.0)
         self.dragging = False
+
+        # Log the end of drag
+        if self.db_manager and self.db_manager.log:
+            self.db_manager.log.debug(f"Finished dragging column: {self.name}")
 
         # Reset to original position since we're not persisting changes
         if self.initial_position:

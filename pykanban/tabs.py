@@ -31,16 +31,27 @@ class KanbanTabManager(QTabWidget):
     class KanbanColumnContainer(QWidget):
         """Container widget for Kanban columns that supports drag and drop"""
 
-        def __init__(self, parent=None, log=None):
+        def __init__(self, parent=None, log=None, db_manager=None):
             """Initialize the column container
 
             Args:
                 parent: Parent widget
                 log: Logger instance
+                db_manager: Database manager for fetching column order
             """
             super().__init__(parent)
             self.log = log
+            self.db_manager = db_manager
             self.setObjectName("columnContainer")
+
+            # Dictionary to track column order: {column_name: order}
+            self.column_order = {}
+
+            # Track the column currently being dragged
+            self.dragged_column = None
+
+            # Track column positions (left edge x-coordinate)
+            self.column_positions = []
 
             # Enable dropping
             self.setAcceptDrops(True)
@@ -52,6 +63,62 @@ class KanbanTabManager(QTabWidget):
 
             # Setup context menu
             self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        def refresh_column_order(self):
+            """Refresh the column order dictionary from the database"""
+            if not self.db_manager:
+                print("Cannot refresh column order: no database manager")
+                return
+
+            # Load active columns
+            result = self.db_manager.load_columns()
+            if result.success:
+                # Clear existing order dictionary
+                self.column_order.clear()
+
+                # Get column data which includes (name, number, column_color, text_color)
+                columns = result.data
+
+                # Fetch the actual order values from the database
+                for column_data in columns:
+                    name = column_data[0]  # Name is the first element
+
+                    # Query the database for this column's order
+                    order_query = """
+                    SELECT "Order"
+                    FROM Columns
+                    WHERE Name = ? AND deletion_date IS NULL;
+                    """
+
+                    with self.db_manager.db_manager.connection() as db:
+                        order_result = db.execute_query(order_query, (name,))
+                        if order_result.success and order_result.data.next():
+                            order = order_result.data.value("Order")
+                            self.column_order[name] = order
+                        else:
+                            print(f"Could not find order for column: {name}")
+
+                print(f"Refreshed column order: {self.column_order}")
+            else:
+                print(f"Failed to load columns: {result.message}")
+
+        def update_column_positions(self):
+            """Update the positions of columns for drag reference"""
+            self.column_positions = []
+
+            # For each column widget, store its position
+            for i in range(self.column_layout.count()):
+                widget = self.column_layout.itemAt(i).widget()
+                if widget and hasattr(widget, "name"):
+                    # Store the left edge x-coordinate, width, and widget reference
+                    pos = widget.pos().x()
+                    self.column_positions.append((pos, widget.width(), widget))
+                    print(
+                        f"""Added column position:
+                        {widget.name} at x={pos}, width={widget.width()}"""
+                    )
+
+            print(f"Updated column positions: {len(self.column_positions)} columns")
 
         def dragEnterEvent(self, event):
             """Handle drag enter events
@@ -69,12 +136,21 @@ class KanbanTabManager(QTabWidget):
                 # Only accept if it's not a fixed column
                 if column_name not in ["Ready to Start", "Complete"]:
                     event.accept()
-                    if self.log:
-                        self.log.debug(f"Accepted drag enter for column: {column_name}")
+
+                    # Store the dragged column
+                    self.dragged_column = column_name
+
+                    # Save a copy of the original order
+                    self.original_column_order = self.column_order.copy()
+
+                    # Update column positions for reference
+                    self.update_column_positions()
+
+                    print(f"Started dragging column: {column_name}")
+                    print(f"Current order: {self.column_order}")
                 else:
                     event.ignore()
-                    if self.log:
-                        self.log.debug(f"Rejected drag for fixed column: {column_name}")
+                    print(f"Rejected drag for fixed column: {column_name}")
             else:
                 event.ignore()
 
@@ -95,28 +171,115 @@ class KanbanTabManager(QTabWidget):
                 if column_name not in ["Ready to Start", "Complete"]:
                     event.accept()
 
-                    # Here you could add visual indicators like drawing a line or
-                    # highlighting where the column would be placed
-                    # For now, we'll just accept the drag
+                    # Calculate new position and update order dictionary
+                    self.calculate_new_order(event.position().x(), column_name)
                 else:
                     event.ignore()
             else:
                 event.ignore()
 
+        def calculate_new_order(self, x_pos, column_name):  # noqa: C901
+            """Calculate the new order for the dragged column
+
+            Args:
+                x_pos: Current x position of the drag
+                column_name: Name of the column being dragged
+            """
+            # Find the position in the layout where the column would be dropped
+            target_index = 0
+
+            # Skip if we have no column positions
+            if not self.column_positions:
+                print("No column positions available")
+                return
+
+            # Determine where the column would be inserted based on x position
+            for i, (pos, width, widget) in enumerate(self.column_positions):
+                # If widget is the dragged column, skip it
+                if hasattr(widget, "name") and widget.name == column_name:
+                    continue
+
+                # If past the middle of this column
+                if x_pos > pos + (width / 2):
+                    target_index = i + 1
+                else:
+                    break
+
+            # Find the order of "Ready to Start" and "Complete" columns
+            ready_order = None
+            complete_order = None
+            for name, order in self.column_order.items():
+                if name == "Ready to Start":
+                    ready_order = order
+                elif name == "Complete":
+                    complete_order = order
+
+            if ready_order is not None and target_index <= ready_order:
+                target_index = ready_order + 1  # Place after "Ready to Start"
+            elif complete_order is not None and target_index >= complete_order:
+                target_index = complete_order - 1  # Place before "Complete"
+
+            # Get current order of the dragged column
+            current_order = self.column_order.get(column_name, 0)
+            if current_order == 0:
+                print(f"Column {column_name} not found in order dictionary")
+                return
+
+            # Calculate new order value
+            new_order = target_index
+
+            # Only update if order actually changes
+            if new_order != current_order:
+                print(f"Moving {column_name} from order {current_order} to {new_order}")
+
+                # Update the order dictionary with the new values
+                # Create a working copy so we don't modify while iterating
+                new_order_dict = self.column_order.copy()
+
+                # Adjust all columns between old and new position
+                if new_order > current_order:
+                    # Moving right: Shift columns between old and new position left
+                    for col, order in new_order_dict.items():
+                        if col != column_name and current_order < order <= new_order:
+                            new_order_dict[col] = order - 1
+                else:
+                    # Moving left: Shift columns between new and old position right
+                    for col, order in new_order_dict.items():
+                        if col != column_name and new_order <= order < current_order:
+                            new_order_dict[col] = order + 1
+
+                # Set new order for dragged column
+                new_order_dict[column_name] = new_order
+
+                # Update the column_order dictionary
+                self.column_order = new_order_dict
+
+                # Print the changes for debugging
+                print(f"Updated order: {self.column_order}")
+
         def dropEvent(self, event):
             """Handle drop events
 
-            For now, we always ignore the drop since we're not persisting changes
+            For now, we just ignore the drop and reset columns to their original positions
 
             Args:
                 event: Drop event
             """
-            # Always ignore drops for now since we don't want to persist changes
-            # This effectively cancels the drag and drop operation
+            # Print the final calculated order for reference
+            print(f"Final calculated order (not persisted): {self.column_order}")
+
+            # Reset to original order
+            if hasattr(self, "original_column_order"):
+                self.column_order = self.original_column_order.copy()
+                print(f"Reset to original order: {self.column_order}")
+
+            # Reset dragged column reference
+            self.dragged_column = None
+
+            # Ignore the drop to let the column snap back to original position
             event.ignore()
 
-            if self.log:
-                self.log.debug("Drop ignored - column will reset to original position")
+            print("Drop ignored - column will reset to original position")
 
     """Manages multiple tabs including Kanban board display
 
@@ -201,12 +364,15 @@ class KanbanTabManager(QTabWidget):
             number=number,
             column_color=column_color,
             text_color=text_color,
-            parent=self.column_container,  # Now using column_container
+            parent=self.column_container,
             db_manager=self.db_manager,
         )
         self.column_layout.addWidget(column)
         if self.log:
             self.log.info(f"Added Kanban column: {name} with color {column_color}")
+
+        # Refresh column order after adding a column
+        self.column_container.refresh_column_order()
 
     # ------------------------------------------------------------------------------------------
 
@@ -230,6 +396,13 @@ class KanbanTabManager(QTabWidget):
         """
         self._db_manager = manager
         print(f"Database manager updated: {manager is not None}")
+
+        # Update column container with new db_manager if it exists
+        if hasattr(self, "column_container"):
+            self.column_container.db_manager = manager
+            # Refresh column order with new database
+            if manager is not None:
+                self.column_container.refresh_column_order()
 
     # ------------------------------------------------------------------------------------------
 
@@ -267,8 +440,10 @@ class KanbanTabManager(QTabWidget):
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        # Use our new KanbanColumnContainer instead of a basic QWidget
-        self.column_container = self.KanbanColumnContainer(log=self.log)
+        # Use enhanced KanbanColumnContainer with db_manager parameter
+        self.column_container = self.KanbanColumnContainer(
+            log=self.log, db_manager=self.db_manager
+        )
         self.column_container.customContextMenuRequested.connect(self._show_context_menu)
 
         # Get reference to the column layout from our container
